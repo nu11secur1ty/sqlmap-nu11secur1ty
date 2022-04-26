@@ -25,8 +25,11 @@ from lib.core.common import randomStr
 from lib.core.common import readInput
 from lib.core.common import removePostHintPrefix
 from lib.core.common import resetCookieJar
+from lib.core.common import safeStringFormat
+from lib.core.common import unArrayizeValue
 from lib.core.common import urldecode
 from lib.core.compat import xrange
+from lib.core.convert import decodeBase64
 from lib.core.convert import getUnicode
 from lib.core.data import conf
 from lib.core.data import kb
@@ -622,7 +625,7 @@ def _createDumpDir():
     if not conf.dumpTable and not conf.dumpAll and not conf.search:
         return
 
-    conf.dumpPath = paths.SQLMAP_DUMP_PATH % conf.hostname
+    conf.dumpPath = safeStringFormat(paths.SQLMAP_DUMP_PATH, conf.hostname)
 
     if not os.path.isdir(conf.dumpPath):
         try:
@@ -739,6 +742,15 @@ def initTargetEnv():
             conf.data = _(urldecode(conf.data))
             setattr(conf.data, UNENCODED_ORIGINAL_VALUE, original)
             kb.postSpaceToPlus = '+' in original
+
+    if conf.data and unArrayizeValue(conf.base64Parameter) == HTTPMETHOD.POST:
+        if '=' not in conf.data.strip('='):
+            try:
+                original = conf.data
+                conf.data = _(decodeBase64(conf.data, binary=False))
+                setattr(conf.data, UNENCODED_ORIGINAL_VALUE, original)
+            except:
+                pass
 
     match = re.search(INJECT_HERE_REGEX, "%s %s %s" % (conf.url, conf.data, conf.httpHeaders))
     kb.customInjectionMark = match.group(0) if match else CUSTOM_INJECTION_MARK_CHAR

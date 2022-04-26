@@ -1839,6 +1839,15 @@ def _cleanupOptions():
     if conf.retries:
         conf.retries = min(conf.retries, MAX_CONNECT_RETRIES)
 
+    if conf.url:
+        match = re.search(r"\A(\w+://)?([^/@?]+)@", conf.url)
+        if match:
+            credentials = match.group(2)
+            conf.url = conf.url.replace("%s@" % credentials, "", 1)
+
+            conf.authType = AUTH_TYPE.BASIC
+            conf.authCred = credentials if ':' in credentials else "%s:" % credentials
+
     if conf.code:
         conf.code = int(conf.code)
 
@@ -2116,6 +2125,7 @@ def _setKnowledgeBaseAttributes(flushAll=True):
     kb.pageStable = None
     kb.partRun = None
     kb.permissionFlag = False
+    kb.place = None
     kb.postHint = None
     kb.postSpaceToPlus = False
     kb.postUrlEncode = True

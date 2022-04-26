@@ -104,6 +104,7 @@ from lib.core.log import LOGGER_HANDLER
 from lib.core.optiondict import optDict
 from lib.core.settings import BANNER
 from lib.core.settings import BOLD_PATTERNS
+from lib.core.settings import BOUNDARY_BACKSLASH_MARKER
 from lib.core.settings import BOUNDED_INJECTION_MARKER
 from lib.core.settings import BRUTE_DOC_ROOT_PREFIXES
 from lib.core.settings import BRUTE_DOC_ROOT_SUFFIXES
@@ -1384,6 +1385,38 @@ def banner():
 
         dataToStdout(result, forceOutput=True)
 
+def parseJson(content):
+    """
+    This function parses POST_HINT.JSON and POST_HINT.JSON_LIKE content
+
+    >>> parseJson("{'id':1}")["id"] == 1
+    True
+    >>> parseJson('{"id":1}')["id"] == 1
+    True
+    """
+
+    quote = None
+    retVal = None
+
+    for regex in (r"'[^']+'\s*:", r'"[^"]+"\s*:'):
+        match = re.search(regex, content)
+        if match:
+            quote = match.group(0)[0]
+
+    try:
+        if quote == '"':
+            retVal = json.loads(content)
+        elif quote == "'":
+            content = content.replace('"', '\\"')
+            content = content.replace("\\'", BOUNDARY_BACKSLASH_MARKER)
+            content = content.replace("'", '"')
+            content = content.replace(BOUNDARY_BACKSLASH_MARKER, "'")
+            retVal = json.loads(content)
+    except:
+        pass
+
+    return retVal
+
 def parsePasswordHash(password):
     """
     In case of Microsoft SQL Server password hash value is expanded to its components
@@ -1475,8 +1508,7 @@ def setPaths(rootPath):
     paths.SQL_KEYWORDS = os.path.join(paths.SQLMAP_TXT_PATH, "keywords.txt")
     paths.SMALL_DICT = os.path.join(paths.SQLMAP_TXT_PATH, "smalldict.txt")
     paths.USER_AGENTS = os.path.join(paths.SQLMAP_TXT_PATH, "user-agents.txt")
-    #paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
-    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "nu11secur1ty.txt")
+    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
     paths.ERRORS_XML = os.path.join(paths.SQLMAP_XML_PATH, "errors.xml")
     paths.BOUNDARIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "boundaries.xml")
     paths.QUERIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "queries.xml")
@@ -3080,6 +3112,8 @@ def extractRegexResult(regex, content, flags=0):
 
     >>> extractRegexResult(r'a(?P<result>[^g]+)g', 'abcdefg')
     'bcdef'
+    >>> extractRegexResult(r'a(?P<result>[^g]+)g', 'ABCDEFG', re.I)
+    'BCDEF'
     """
 
     retVal = None
@@ -5373,6 +5407,12 @@ def parseRequestFile(reqFile, checkParams=True):
 
     if conf.scope:
         logger.info("using regular expression '%s' for filtering targets" % conf.scope)
+
+        try:
+            re.compile(conf.scope)
+        except Exception as ex:
+            errMsg = "invalid regular expression '%s' ('%s')" % (conf.scope, getSafeExString(ex))
+            raise SqlmapSyntaxException(errMsg)
 
     for target in _parseBurpLog(content):
         yield target

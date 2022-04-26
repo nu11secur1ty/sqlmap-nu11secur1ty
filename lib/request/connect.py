@@ -46,6 +46,7 @@ from lib.core.common import getSafeExString
 from lib.core.common import logHTTPTraffic
 from lib.core.common import openFile
 from lib.core.common import popValue
+from lib.core.common import parseJson
 from lib.core.common import pushValue
 from lib.core.common import randomizeParameterValue
 from lib.core.common import randomInt
@@ -56,12 +57,14 @@ from lib.core.common import safeVariableNaming
 from lib.core.common import singleTimeLogMessage
 from lib.core.common import singleTimeWarnMessage
 from lib.core.common import stdev
+from lib.core.common import unArrayizeValue
 from lib.core.common import unsafeVariableNaming
 from lib.core.common import urldecode
 from lib.core.common import urlencode
 from lib.core.common import wasLastResponseDelayed
 from lib.core.compat import patchHeaders
 from lib.core.compat import xrange
+from lib.core.convert import encodeBase64
 from lib.core.convert import getBytes
 from lib.core.convert import getText
 from lib.core.convert import getUnicode
@@ -147,9 +150,12 @@ class Connect(object):
 
     @staticmethod
     def _getPageProxy(**kwargs):
-        if (len(inspect.stack()) > sys.getrecursionlimit() // 2):   # Note: https://github.com/sqlmapproject/sqlmap/issues/4525
-            warnMsg = "unable to connect to the target URL"
-            raise SqlmapConnectionException(warnMsg)
+        try:
+            if (len(inspect.stack()) > sys.getrecursionlimit() // 2):   # Note: https://github.com/sqlmapproject/sqlmap/issues/4525
+                warnMsg = "unable to connect to the target URL"
+                raise SqlmapConnectionException(warnMsg)
+        except TypeError:
+            pass
 
         try:
             return Connect.getPage(**kwargs)
@@ -463,7 +469,7 @@ class Connect(object):
                         break
 
             if post is not None and not multipart and not getHeader(headers, HTTP_HEADER.CONTENT_TYPE):
-                headers[HTTP_HEADER.CONTENT_TYPE] = POST_HINT_CONTENT_TYPES.get(kb.postHint, DEFAULT_CONTENT_TYPE)
+                headers[HTTP_HEADER.CONTENT_TYPE] = POST_HINT_CONTENT_TYPES.get(kb.postHint, DEFAULT_CONTENT_TYPE if unArrayizeValue(conf.base64Parameter) != HTTPMETHOD.POST else PLAIN_TEXT_CONTENT_TYPE)
 
             if headers.get(HTTP_HEADER.CONTENT_TYPE) == POST_HINT_CONTENT_TYPES[POST_HINT.MULTIPART]:
                 warnMsg = "missing 'boundary parameter' in '%s' header. " % HTTP_HEADER.CONTENT_TYPE
@@ -549,6 +555,13 @@ class Connect(object):
             else:
                 post = getBytes(post)
 
+                if unArrayizeValue(conf.base64Parameter) == HTTPMETHOD.POST:
+                    if kb.place != HTTPMETHOD.POST:
+                        conf.data = getattr(conf.data, UNENCODED_ORIGINAL_VALUE, conf.data)
+                    else:
+                        post = urldecode(post, convall=True)
+                        post = encodeBase64(post)
+
                 if target and cmdLineOptions.method or method and method not in (HTTPMETHOD.GET, HTTPMETHOD.POST):
                     req = MethodRequest(url, post, headers)
                     req.set_method(cmdLineOptions.method or method)
@@ -630,7 +643,7 @@ class Connect(object):
                     if hasattr(conn, "redurl"):
                         responseHeaders[HTTP_HEADER.LOCATION] = conn.redurl
 
-                    patchHeaders(responseHeaders)
+                    responseHeaders = patchHeaders(responseHeaders)
                     kb.serverHeader = responseHeaders.get(HTTP_HEADER.SERVER, kb.serverHeader)
                 else:
                     code = None
@@ -712,7 +725,7 @@ class Connect(object):
                 page = ex.read() if not skipRead else None
                 responseHeaders = ex.info()
                 responseHeaders[URI_HTTP_HEADER] = ex.geturl()
-                patchHeaders(responseHeaders)
+                responseHeaders = patchHeaders(responseHeaders)
                 page = decodePage(page, responseHeaders.get(HTTP_HEADER.CONTENT_ENCODING), responseHeaders.get(HTTP_HEADER.CONTENT_TYPE), percentDecode=not crawling)
             except socket.timeout:
                 warnMsg = "connection timed out while trying "
@@ -973,6 +986,8 @@ class Connect(object):
         if not place:
             place = kb.injection.place or PLACE.GET
 
+        kb.place = place
+
         if not auxHeaders:
             auxHeaders = {}
 
@@ -1188,7 +1203,7 @@ class Connect(object):
 
                 if not token:
                     if conf.csrfUrl and conf.csrfToken and conf.csrfUrl != conf.url and code == _http_client.OK:
-                        if headers and "text/plain" in headers.get(HTTP_HEADER.CONTENT_TYPE, ""):
+                        if headers and PLAIN_TEXT_CONTENT_TYPE in headers.get(HTTP_HEADER.CONTENT_TYPE, ""):
                             token.name = conf.csrfToken
                             token.value = page
 
@@ -1236,6 +1251,12 @@ class Connect(object):
                     origValue = match.group("value")
                     newValue = randomizeParameterValue(origValue) if randomParameter not in kb.randomPool else random.sample(kb.randomPool[randomParameter], 1)[0]
                     retVal = re.sub(r"(\A|\b)%s=[^&;]*" % re.escape(randomParameter), "%s=%s" % (randomParameter, newValue), paramString)
+                else:
+                    match = re.search(r"(\A|\b)(%s\b[^\w]+)(?P<value>\w+)" % re.escape(randomParameter), paramString)
+                    if match:
+                        origValue = match.group("value")
+                        newValue = randomizeParameterValue(origValue) if randomParameter not in kb.randomPool else random.sample(kb.randomPool[randomParameter], 1)[0]
+                        retVal = paramString.replace(match.group(0), "%s%s" % (match.group(2), newValue))
                 return retVal
 
             for randomParameter in conf.rParam:
@@ -1270,6 +1291,13 @@ class Connect(object):
                             name = safeVariableNaming(name)
                         value = urldecode(value, convall=True, spaceplus=(item == post and kb.postSpaceToPlus))
                         variables[name] = value
+
+            if post and kb.postHint in (POST_HINT.JSON, POST_HINT.JSON_LIKE):
+                for name, value in (parseJson(post) or {}).items():
+                    if safeVariableNaming(name) != name:
+                        conf.evalCode = re.sub(r"\b%s\b" % re.escape(name), safeVariableNaming(name), conf.evalCode)
+                        name = safeVariableNaming(name)
+                    variables[name] = value
 
             if cookie:
                 for part in cookie.split(conf.cookieDel or DEFAULT_COOKIE_DELIMITER):
@@ -1328,7 +1356,27 @@ class Connect(object):
                         found = False
                         value = getUnicode(value, UNICODE_ENCODING)
 
-                        if kb.postHint and re.search(r"\b%s\b" % re.escape(name), post or ""):
+                        if kb.postHint == POST_HINT.MULTIPART:
+                            boundary = "--%s" % re.search(r"boundary=([^\s]+)", contentType).group(1)
+                            if boundary:
+                                parts = post.split(boundary)
+                                match = re.search(r'\bname="%s"' % re.escape(name), post)
+                                if not match and parts:
+                                    parts.insert(2, parts[1])
+                                    parts[2] = re.sub(r'\bname="[^"]+".*', 'name="%s"' % re.escape(name), parts[2])
+                                for i in xrange(len(parts)):
+                                    part = parts[i]
+                                    if re.search(r'\bname="%s"' % re.escape(name), part):
+                                        match = re.search(r"(?s)\A.+?\r?\n\r?\n", part)
+                                        if match:
+                                            found = True
+                                            first = match.group(0)
+                                            second = part[len(first):]
+                                            second = re.sub(r"(?s).+?(\r?\n?\-*\Z)", r"%s\g<1>" % re.escape(value), second)
+                                            parts[i] = "%s%s" % (first, second)
+                                post = boundary.join(parts)
+
+                        elif kb.postHint and re.search(r"\b%s\b" % re.escape(name), post or ""):
                             if kb.postHint in (POST_HINT.XML, POST_HINT.SOAP):
                                 if re.search(r"<%s\b" % re.escape(name), post):
                                     found = True
@@ -1336,6 +1384,17 @@ class Connect(object):
                                 elif re.search(r"\b%s>" % re.escape(name), post):
                                     found = True
                                     post = re.sub(r"(?s)(\b%s>)(.*?)(</[^<]*\b%s>)" % (re.escape(name), re.escape(name)), r"\g<1>%s\g<3>" % value.replace('\\', r'\\'), post)
+
+                            elif kb.postHint in (POST_HINT.JSON, POST_HINT.JSON_LIKE):
+                                match = re.search(r"['\"]%s['\"]:" % re.escape(name), post)
+                                if match:
+                                    quote = match.group(0)[0]
+                                    post = post.replace("\\%s" % quote, BOUNDARY_BACKSLASH_MARKER)
+                                    match = re.search(r"(%s%s%s:\s*)(\d+|%s[^%s]*%s)" % (quote, re.escape(name), quote, quote, quote, quote), post)
+                                    if match:
+                                        found = True
+                                        post = post.replace(match.group(0), "%s%s" % (match.group(1), value if value.isdigit() else "%s%s%s" % (match.group(0)[0], value, match.group(0)[0])))
+                                    post = post.replace(BOUNDARY_BACKSLASH_MARKER, "\\%s" % quote)
 
                             regex = r"\b(%s)\b([^\w]+)(\w+)" % re.escape(name)
                             if not found and re.search(regex, (post or "")):
@@ -1355,14 +1414,20 @@ class Connect(object):
                             found = True
                             uri = re.sub(regex.replace(r"\A", r"\?"), r"\g<1>%s\g<3>" % value.replace('\\', r'\\'), uri)
 
-                        regex = r"((\A|%s)%s=).+?(%s|\Z)" % (re.escape(conf.cookieDel or DEFAULT_COOKIE_DELIMITER), re.escape(name), re.escape(conf.cookieDel or DEFAULT_COOKIE_DELIMITER))
+                        regex = r"((\A|%s\s*)%s=).+?(%s|\Z)" % (re.escape(conf.cookieDel or DEFAULT_COOKIE_DELIMITER), re.escape(name), re.escape(conf.cookieDel or DEFAULT_COOKIE_DELIMITER))
                         if re.search(regex, (cookie or "")):
                             found = True
                             cookie = re.sub(regex, r"\g<1>%s\g<3>" % value.replace('\\', r'\\'), cookie)
 
                         if not found:
                             if post is not None:
-                                post += "%s%s=%s" % (delimiter, name, value)
+                                if kb.postHint in (POST_HINT.JSON, POST_HINT.JSON_LIKE):
+                                    match = re.search(r"['\"]", post)
+                                    if match:
+                                        quote = match.group(0)
+                                        post = re.sub(r"\}\Z", "%s%s}" % (',' if re.search(r"\w", post) else "", "%s%s%s:%s" % (quote, name, quote, value if value.isdigit() else "%s%s%s" % (quote, value, quote))), post)
+                                else:
+                                    post += "%s%s=%s" % (delimiter, name, value)
                             elif get is not None:
                                 get += "%s%s=%s" % (delimiter, name, value)
                             elif cookie is not None:
@@ -1410,7 +1475,7 @@ class Connect(object):
 
                 deviation = stdev(kb.responseTimes[kb.responseTimeMode])
 
-                if deviation > WARN_TIME_STDEV:
+                if deviation is not None and deviation > WARN_TIME_STDEV:
                     kb.adjustTimeDelay = ADJUST_TIME_DELAY.DISABLE
 
                     warnMsg = "considerable lagging has been detected "
@@ -1504,7 +1569,7 @@ class Connect(object):
             kb.permissionFlag = True
             singleTimeWarnMessage("potential permission problems detected ('%s')" % message)
 
-        patchHeaders(headers)
+        headers = patchHeaders(headers)
 
         if content or response:
             return page, headers, code

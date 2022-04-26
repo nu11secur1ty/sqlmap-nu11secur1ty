@@ -129,7 +129,9 @@ class Agent(object):
             if kb.postHint in (POST_HINT.SOAP, POST_HINT.XML):
                 origValue = re.split(r"['\">]", origValue)[-1]
             elif kb.postHint in (POST_HINT.JSON, POST_HINT.JSON_LIKE):
-                origValue = extractRegexResult(r"(?s)\"\s*:\s*(?P<result>\d+\Z)", origValue) or extractRegexResult(r'(?s)[\s:]*(?P<result>[^"\[,]+\Z)', origValue)
+                match = re.search(r"['\"]", origValue)
+                quote = match.group(0) if match else '"'
+                origValue = extractRegexResult(r"%s\s*:\s*(?P<result>\d+)\Z" % quote, origValue) or extractRegexResult(r"(?P<result>[^%s]*)\Z" % quote, origValue)
             else:
                 _ = extractRegexResult(r"(?s)(?P<result>[^\s<>{}();'\"&]+\Z)", origValue) or ""
                 origValue = _.split('=', 1)[1] if '=' in _ else ""
@@ -398,7 +400,7 @@ class Agent(object):
         """
 
         if payload:
-            for match in re.finditer(r"%s(.*?)%s" % (BOUNDED_BASE64_MARKER, BOUNDED_BASE64_MARKER), payload):
+            for match in re.finditer(r"(?s)%s(.*?)%s" % (BOUNDED_BASE64_MARKER, BOUNDED_BASE64_MARKER), payload):
                 _ = encodeBase64(match.group(1), binary=False, encoding=conf.encoding or UNICODE_ENCODING, safe=conf.base64Safe)
                 payload = payload.replace(match.group(0), _)
 
@@ -415,6 +417,11 @@ class Agent(object):
                 payload = re.sub(r"(?i)\bORD\(", "ASCII(", payload)
                 payload = re.sub(r"(?i)\bMID\(", "SUBSTR(", payload)
                 payload = re.sub(r"(?i)\bNCHAR\b", "CHAR", payload)
+
+            # NOTE: https://github.com/sqlmapproject/sqlmap/issues/5057
+            match = re.search(r"(=0x)(303a303a)3(\d{2,})", payload)
+            if match:
+                payload = payload.replace(match.group(0), "%s%s%s" % (match.group(1), match.group(2).upper(), "".join("3%s" % _ for _ in match.group(3))))
 
         return payload
 

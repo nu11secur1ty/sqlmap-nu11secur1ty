@@ -48,6 +48,7 @@ try:
     from lib.core.common import checkPipedInput
     from lib.core.common import createGithubIssue
     from lib.core.common import dataToStdout
+    from lib.core.common import extractRegexResult
     from lib.core.common import filterNone
     from lib.core.common import getDaysFromLastUpdate
     from lib.core.common import getFileItems
@@ -60,12 +61,12 @@ try:
     from lib.core.common import MKSTEMP_PREFIX
     from lib.core.common import setColor
     from lib.core.common import unhandledExceptionMessage
+    from lib.core.compat import LooseVersion
+    from lib.core.compat import xrange
     from lib.core.data import cmdLineOptions
     from lib.core.data import conf
     from lib.core.data import kb
     from lib.core.datatype import OrderedSet
-    from lib.core.compat import LooseVersion
-    from lib.core.compat import xrange
     from lib.core.exception import SqlmapBaseException
     from lib.core.exception import SqlmapShellQuitException
     from lib.core.exception import SqlmapSilentQuitException
@@ -160,6 +161,7 @@ def main():
             # to an IPC database
             sys.stdout = StdDbOut(conf.taskid, messagetype="stdout")
             sys.stderr = StdDbOut(conf.taskid, messagetype="stderr")
+
             setRestAPILog()
 
         conf.showTime = True
@@ -336,6 +338,12 @@ def main():
             logger.critical(errMsg)
             raise SystemExit
 
+        elif "invalid maximum character passed to PyUnicode_New" in excMsg and re.search(r"\A3\.[34]", sys.version) is not None:
+            errMsg = "please upgrade the Python version (>= 3.5) "
+            errMsg += "(Reference: 'https://bugs.python.org/issue18183')"
+            logger.critical(errMsg)
+            raise SystemExit
+
         elif all(_ in excMsg for _ in ("scramble_caching_sha2", "TypeError")):
             errMsg = "please downgrade the 'PyMySQL' package (=< 0.8.1) "
             errMsg += "(Reference: 'https://github.com/PyMySQL/PyMySQL/issues/700')"
@@ -346,6 +354,11 @@ def main():
             errMsg = "error occurred at Python interpreter which "
             errMsg += "is fixed in 2.7. Please update accordingly "
             errMsg += "(Reference: 'https://bugs.python.org/issue8104')"
+            logger.critical(errMsg)
+            raise SystemExit
+
+        elif all(_ in excMsg for _ in ("OSError: [Errno 22] Invalid argument: '", "importlib")):
+            errMsg = "unable to read file '%s'" % extractRegexResult(r"OSError: \[Errno 22\] Invalid argument: '(?P<result>[^']+)", excMsg)
             logger.critical(errMsg)
             raise SystemExit
 
@@ -377,17 +390,17 @@ def main():
             raise SystemExit
 
         elif all(_ in excMsg for _ in ("pymysql", "configparser")):
-            errMsg = "wrong initialization of pymsql detected (using Python3 dependencies)"
+            errMsg = "wrong initialization of 'pymsql' detected (using Python3 dependencies)"
             logger.critical(errMsg)
             raise SystemExit
 
         elif all(_ in excMsg for _ in ("ntlm", "socket.error, err", "SyntaxError")):
-            errMsg = "wrong initialization of python-ntlm detected (using Python2 syntax)"
+            errMsg = "wrong initialization of 'python-ntlm' detected (using Python2 syntax)"
             logger.critical(errMsg)
             raise SystemExit
 
         elif all(_ in excMsg for _ in ("drda", "to_bytes")):
-            errMsg = "wrong initialization of drda detected (using Python3 syntax)"
+            errMsg = "wrong initialization of 'drda' detected (using Python3 syntax)"
             logger.critical(errMsg)
             raise SystemExit
 
@@ -423,13 +436,13 @@ def main():
             dataToStdout(excMsg)
             raise SystemExit
 
-        elif any(_ in excMsg for _ in ("tamper/", "waf/")):
+        elif any(_ in "%s\n%s" % (errMsg, excMsg) for _ in ("tamper/", "waf/", "--engagement-dojo")):
             logger.critical(errMsg)
             print()
             dataToStdout(excMsg)
             raise SystemExit
 
-        elif any(_ in excMsg for _ in ("ImportError", "ModuleNotFoundError", "Can't find file for module", "SAXReaderNotAvailable", "source code string cannot contain null bytes", "No module named", "tp_name field")):
+        elif any(_ in excMsg for _ in ("ImportError", "ModuleNotFoundError", "<frozen", "Can't find file for module", "SAXReaderNotAvailable", "source code string cannot contain null bytes", "No module named", "tp_name field", "module 'sqlite3' has no attribute 'OperationalError'")):
             errMsg = "invalid runtime environment ('%s')" % excMsg.split("Error: ")[-1].strip()
             logger.critical(errMsg)
             raise SystemExit
@@ -573,5 +586,5 @@ if __name__ == "__main__":
         else:
             sys.exit(getattr(os, "_exitcode", 0))
 else:
-    # cancelling postponed imports (because of Travis CI checks)
+    # cancelling postponed imports (because of CI/CD checks)
     __import__("lib.controller.controller")

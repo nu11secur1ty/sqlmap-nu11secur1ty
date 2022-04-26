@@ -20,7 +20,7 @@ from thirdparty import six
 from thirdparty.six import unichr as _unichr
 
 # sqlmap version (<major>.<minor>.<month>.<monthly commit>)
-VERSION = "1.6.1.2"
+VERSION = "1.6.4.5"
 TYPE = "dev" if VERSION.count('.') > 2 and VERSION.split('.')[-1] != '0' else "stable"
 TYPE_COLORS = {"dev": 33, "stable": 90, "pip": 34}
 VERSION_STRING = "sqlmap/%s#%s" % ('.'.join(VERSION.split('.')[:-1]) if VERSION.count('.') > 2 and VERSION.split('.')[-1] == '0' else VERSION, TYPE)
@@ -36,15 +36,12 @@ ZIPBALL_PAGE = "https://github.com/sqlmapproject/sqlmap/zipball/master"
 
 # colorful banner
 BANNER = """\033[01;33m\
-                     ,d     d                                             ,d   d8           
-888-~88e 888  888 ,d888 ,d888  d88~\  e88~~8e   e88~~\ 888  888 888-~\ ,d888 _d88__ Y88b  / 
-888  888 888  888   888   888 C888   d888  88b d888    888  888 888      888  888    Y888/  
-888  888 888  888   888   888  Y88b  8888__888 8888    888  888 888      888  888     Y8/   
-888  888 888  888   888   888   888D Y888    , Y888    888  888 888      888  888      Y    
-888  888 "88_-888   888   888 \_88P   "88___/   "88__/ "88_-888 888      888  "88_/   /     
-                                                                                    _/
- \033[01;37m{\033[01;%dm%s\033[01;37m}\033[01;33m
- \033[0m\033[4;37m%s\033[0m\n https://www.nu11secur1ty.com/\n
+        ___
+       __H__
+ ___ ___[.]_____ ___ ___  \033[01;37m{\033[01;%dm%s\033[01;37m}\033[01;33m
+|_ -| . [.]     | .'| . |
+|___|_  [.]_|_|_|__,|  _|
+      |_|V...       |_|   \033[0m\033[4;37m%s\033[0m\n
 """ % (TYPE_COLORS.get(TYPE, 31), VERSION_STRING.split('/')[-1], SITE)
 
 # Minimum distance of ratio from kb.matchRatio to result in True
@@ -71,11 +68,11 @@ BOUNDARY_BACKSLASH_MARKER = "__BACKSLASH__"
 PARAMETER_PERCENTAGE_MARKER = "__PERCENTAGE__"
 PARTIAL_VALUE_MARKER = "__PARTIAL_VALUE__"
 PARTIAL_HEX_VALUE_MARKER = "__PARTIAL_HEX_VALUE__"
-URI_QUESTION_MARKER = "__QUESTION_MARK__"
-ASTERISK_MARKER = "__ASTERISK_MARK__"
-REPLACEMENT_MARKER = "__REPLACEMENT_MARK__"
-BOUNDED_BASE64_MARKER = "__BOUNDED_BASE64_MARK__"
-BOUNDED_INJECTION_MARKER = "__BOUNDED_INJECTION_MARK__"
+URI_QUESTION_MARKER = "__QUESTION__"
+ASTERISK_MARKER = "__ASTERISK__"
+REPLACEMENT_MARKER = "__REPLACEMENT__"
+BOUNDED_BASE64_MARKER = "__BOUNDED_BASE64__"
+BOUNDED_INJECTION_MARKER = "__BOUNDED_INJECTION__"
 SAFE_VARIABLE_MARKER = "__SAFE__"
 SAFE_HEX_MARKER = "__SAFE_HEX__"
 DOLLAR_MARKER = "__DOLLAR__"
@@ -595,7 +592,7 @@ LEGAL_DISCLAIMER = "Usage of sqlmap for attacking targets without prior mutual c
 REFLECTIVE_MISS_THRESHOLD = 20
 
 # Regular expression used for extracting HTML title
-HTML_TITLE_REGEX = r"<title>(?P<result>[^<]+)</title>"
+HTML_TITLE_REGEX = r"(?i)<title>(?P<result>[^<]+)</title>"
 
 # Table used for Base64 conversion in WordPress hash cracking routine
 ITOA64 = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -701,7 +698,7 @@ DEFAULT_COOKIE_DELIMITER = ';'
 FORCE_COOKIE_EXPIRATION_TIME = "9999999999"
 
 # Github OAuth token used for creating an automatic Issue for unhandled exceptions
-GITHUB_REPORT_OAUTH_TOKEN = "NTYzYjhmZWJjYzc0Njg2ODJhNzhmNDg1YzM0YzlkYjk3N2JiMzE3Nw"
+GITHUB_REPORT_OAUTH_TOKEN = "Z2hwX2FOMDdpUWx0NDg0ak85QW4yU1pSQjhtazhBaVVlRzNaMUxmMA"
 
 # Skip unforced HashDB flush requests below the threshold number of cached items
 HASHDB_FLUSH_THRESHOLD = 32
