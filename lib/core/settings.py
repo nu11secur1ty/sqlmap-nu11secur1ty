@@ -20,7 +20,7 @@ from thirdparty import six
 from thirdparty.six import unichr as _unichr
 
 # sqlmap version (<major>.<minor>.<month>.<monthly commit>)
-VERSION = "1.6.4.5"
+VERSION = "1.6.8.2"
 TYPE = "dev" if VERSION.count('.') > 2 and VERSION.split('.')[-1] != '0' else "stable"
 TYPE_COLORS = {"dev": 33, "stable": 90, "pip": 34}
 VERSION_STRING = "sqlmap/%s#%s" % ('.'.join(VERSION.split('.')[:-1]) if VERSION.count('.') > 2 and VERSION.split('.')[-1] == '0' else VERSION, TYPE)
@@ -36,12 +36,15 @@ ZIPBALL_PAGE = "https://github.com/sqlmapproject/sqlmap/zipball/master"
 
 # colorful banner
 BANNER = """\033[01;33m\
-        ___
-       __H__
- ___ ___[.]_____ ___ ___  \033[01;37m{\033[01;%dm%s\033[01;37m}\033[01;33m
-|_ -| . [.]     | .'| . |
-|___|_  [.]_|_|_|__,|  _|
-      |_|V...       |_|   \033[0m\033[4;37m%s\033[0m\n
+                     ,d     d                                             ,d   d8           
+888-~88e 888  888 ,d888 ,d888  d88~\  e88~~8e   e88~~\ 888  888 888-~\ ,d888 _d88__ Y88b  / 
+888  888 888  888   888   888 C888   d888  88b d888    888  888 888      888  888    Y888/  
+888  888 888  888   888   888  Y88b  8888__888 8888    888  888 888      888  888     Y8/   
+888  888 888  888   888   888   888D Y888    , Y888    888  888 888      888  888      Y    
+888  888 "88_-888   888   888 \_88P   "88___/   "88__/ "88_-888 888      888  "88_/   /     
+                                                                                    _/
+ \033[01;37m{\033[01;%dm%s\033[01;37m}\033[01;33m
+ \033[0m\033[4;37m%s\033[0m\n https://www.nu11secur1ty.com/\n
 """ % (TYPE_COLORS.get(TYPE, 31), VERSION_STRING.split('/')[-1], SITE)
 
 # Minimum distance of ratio from kb.matchRatio to result in True
@@ -845,7 +848,7 @@ JSON_LIKE_RECOGNITION_REGEX = r"(?s)\A(\s*\[)*\s*\{.*('[^']+'|\"[^\"]+\"|\w+)\s*
 MULTIPART_RECOGNITION_REGEX = r"(?i)Content-Disposition:[^;]+;\s*name="
 
 # Regular expression used for detecting Array-like POST data
-ARRAY_LIKE_RECOGNITION_REGEX = r"(\A|%s)(\w+)\[\]=.+%s\2\[\]=" % (DEFAULT_GET_POST_DELIMITER, DEFAULT_GET_POST_DELIMITER)
+ARRAY_LIKE_RECOGNITION_REGEX = r"(\A|%s)(\w+)\[\d*\]=.+%s\2\[\d*\]=" % (DEFAULT_GET_POST_DELIMITER, DEFAULT_GET_POST_DELIMITER)
 
 # Default POST data content-type
 DEFAULT_CONTENT_TYPE = "application/x-www-form-urlencoded; charset=utf-8"
