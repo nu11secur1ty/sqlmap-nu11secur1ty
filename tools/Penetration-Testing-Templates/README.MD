@@ -1,5 +1,3 @@
 ## Table of content
 
-- perpetuumobile.py
-
-`dump all dabases`
+- perpetuumobile.py `Template for a dump of all database`
