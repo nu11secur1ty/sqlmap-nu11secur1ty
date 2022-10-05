@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# nu11secur1ty
+# Author nu11secur1ty 2022
 import time
 import os
 from colorama import init, Fore, Back, Style
