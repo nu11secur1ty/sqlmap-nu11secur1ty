@@ -24,7 +24,7 @@ time.sleep(5)
 ## /path/to/your/environment/exploit.txt
 exploit = open("/path/to/your/environment/exploit.txt", "a")
 
-## your content length and lines numbers of your Exploit.
+## your content length and lines numbers of your POST Request exploit.
 exploit.write("\n")
 exploit.write("\n")
 exploit.write("\n")
