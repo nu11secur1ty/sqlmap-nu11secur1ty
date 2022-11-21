@@ -1508,8 +1508,7 @@ def setPaths(rootPath):
     paths.SQL_KEYWORDS = os.path.join(paths.SQLMAP_TXT_PATH, "keywords.txt")
     paths.SMALL_DICT = os.path.join(paths.SQLMAP_TXT_PATH, "smalldict.txt")
     paths.USER_AGENTS = os.path.join(paths.SQLMAP_TXT_PATH, "user-agents.txt")
-    # paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
-    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "nu11secur1ty.txt")
+    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
     paths.ERRORS_XML = os.path.join(paths.SQLMAP_XML_PATH, "errors.xml")
     paths.BOUNDARIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "boundaries.xml")
     paths.QUERIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "queries.xml")
@@ -3709,7 +3708,7 @@ def getSortedInjectionTests():
         if test.stype == PAYLOAD.TECHNIQUE.UNION:
             retVal = SORT_ORDER.LAST
 
-        elif "details" in test and "dbms" in test.details:
+        elif "details" in test and "dbms" in (test.details or {}):
             if intersect(test.details.dbms, Backend.getIdentifiedDbms()):
                 retVal = SORT_ORDER.SECOND
             else:
@@ -4270,7 +4269,8 @@ def safeSQLIdentificatorNaming(name, isTable=False):
                             retVal = "[%s]" % retVal
 
         if _ and DEFAULT_MSSQL_SCHEMA not in retVal and '.' not in re.sub(r"\[[^]]+\]", "", retVal):
-            retVal = "%s.%s" % (DEFAULT_MSSQL_SCHEMA, retVal)
+            if (conf.db or "").lower() != "information_schema":     # NOTE: https://github.com/sqlmapproject/sqlmap/issues/5192
+                retVal = "%s.%s" % (DEFAULT_MSSQL_SCHEMA, retVal)
 
     return retVal
 

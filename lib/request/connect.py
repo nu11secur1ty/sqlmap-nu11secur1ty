@@ -587,7 +587,8 @@ class Connect(object):
 
                 if not getRequestHeader(req, HTTP_HEADER.COOKIE) and conf.cj:
                     conf.cj._policy._now = conf.cj._now = int(time.time())
-                    cookies = conf.cj._cookies_for_request(req)
+                    with conf.cj._cookies_lock:
+                        cookies = conf.cj._cookies_for_request(req)
                     requestHeaders += "\r\n%s" % ("Cookie: %s" % ";".join("%s=%s" % (getUnicode(cookie.name), getUnicode(cookie.value)) for cookie in cookies))
 
                 if post is not None:
@@ -1011,9 +1012,10 @@ class Connect(object):
 
             if (kb.postHint or conf.skipUrlEncode) and postUrlEncode:
                 postUrlEncode = False
-                conf.httpHeaders = [_ for _ in conf.httpHeaders if _[1] != contentType]
-                contentType = POST_HINT_CONTENT_TYPES.get(kb.postHint, PLAIN_TEXT_CONTENT_TYPE)
-                conf.httpHeaders.append((HTTP_HEADER.CONTENT_TYPE, contentType))
+                if not (conf.skipUrlEncode and contentType):    # NOTE: https://github.com/sqlmapproject/sqlmap/issues/5092
+                    conf.httpHeaders = [_ for _ in conf.httpHeaders if _[1] != contentType]
+                    contentType = POST_HINT_CONTENT_TYPES.get(kb.postHint, PLAIN_TEXT_CONTENT_TYPE)
+                    conf.httpHeaders.append((HTTP_HEADER.CONTENT_TYPE, contentType))
 
         if payload:
             delimiter = conf.paramDel or (DEFAULT_GET_POST_DELIMITER if place != PLACE.COOKIE else DEFAULT_COOKIE_DELIMITER)
@@ -1179,7 +1181,7 @@ class Connect(object):
                     warnMsg += ". sqlmap is going to retry the request"
                     logger.warning(warnMsg)
 
-                page, headers, code = Connect.getPage(url=conf.csrfUrl or conf.url, data=conf.data if conf.csrfUrl == conf.url else None, method=conf.csrfMethod or (conf.method if conf.csrfUrl == conf.url else None), cookie=conf.parameters.get(PLACE.COOKIE), direct=True, silent=True, ua=conf.parameters.get(PLACE.USER_AGENT), referer=conf.parameters.get(PLACE.REFERER), host=conf.parameters.get(PLACE.HOST))
+                page, headers, code = Connect.getPage(url=conf.csrfUrl or conf.url, data=conf.csrfData or (conf.data if conf.csrfUrl == conf.url else None), method=conf.csrfMethod or (conf.method if conf.csrfUrl == conf.url else None), cookie=conf.parameters.get(PLACE.COOKIE), direct=True, silent=True, ua=conf.parameters.get(PLACE.USER_AGENT), referer=conf.parameters.get(PLACE.REFERER), host=conf.parameters.get(PLACE.HOST))
                 page = urldecode(page)  # for anti-CSRF tokens with special characters in their name (e.g. 'foo:bar=...')
 
                 match = re.search(r"(?i)<input[^>]+\bname=[\"']?(?P<name>%s)\b[^>]*\bvalue=[\"']?(?P<value>[^>'\"]*)" % conf.csrfToken, page or "", re.I)
