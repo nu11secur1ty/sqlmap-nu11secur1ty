@@ -6,7 +6,7 @@
 Only for advanced users!
 
 ```bash
-go run 
+go run generatePoC.go
 python exploit.py
 ```
 BR
