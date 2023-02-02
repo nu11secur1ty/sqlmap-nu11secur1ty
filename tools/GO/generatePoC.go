@@ -1,3 +1,4 @@
+// @nu11secur1ty 2023
 package main
 
 import (
