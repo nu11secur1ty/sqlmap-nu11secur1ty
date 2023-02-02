@@ -5,4 +5,8 @@
 ## Usage
 Only for advanced users!
 
+```bash
+go run 
+python exploit.py
+```
 BR
