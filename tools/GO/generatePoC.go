@@ -16,7 +16,7 @@ func main() {
 	
     defer f.Close()
 
-    val := `YOUR_POST_or_GET_Request_from_BurpSuite_here`
+    val := `<YOUR_POST_or_GET_Request_from_BurpSuite_here>`
 
     data := []byte(val)
 
