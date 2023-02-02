@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2022 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2023 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -489,7 +489,7 @@ class Agent(object):
         if field and Backend.getIdentifiedDbms():
             rootQuery = queries[Backend.getIdentifiedDbms()]
 
-            if field.startswith("(CASE") or field.startswith("(IIF") or conf.noCast:
+            if field.startswith("(CASE") or field.startswith("(IIF") or conf.noCast and not (field.startswith("COUNT(") and getTechnique() in (PAYLOAD.TECHNIQUE.ERROR, PAYLOAD.TECHNIQUE.UNION) and Backend.getIdentifiedDbms() == DBMS.MSSQL):
                 nulledCastedField = field
             else:
                 if not (Backend.isDbms(DBMS.SQLITE) and not isDBMSVersionAtLeast('3')):
@@ -595,6 +595,9 @@ class Agent(object):
         _ = zeroDepthSearch(query, " FROM ")
         if not _:
             fieldsSelectFrom = None
+
+        if re.search(r"\bWHERE\b.+(MIN|MAX)", query, re.I):
+            fieldsMinMaxstr = None
 
         fieldsToCastStr = fieldsNoSelect
 
