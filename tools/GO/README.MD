@@ -3,10 +3,10 @@
 - This is a strong `exploit.txt` GO generator for `sqlmap-nu11secur1ty`
 
 ## Usage
-Only for advanced users!
+- - WARNING: Only for advanced users!
 
 ```bash
-go run generatePoC.go
-python exploit.py
+0. go run generatePoC.go
+1. python exploit.py
 ```
 BR
