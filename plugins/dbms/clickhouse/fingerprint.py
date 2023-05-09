@@ -12,13 +12,13 @@ from lib.core.data import kb
 from lib.core.data import logger
 from lib.core.enums import DBMS
 from lib.core.session import setDbms
-from lib.core.settings import DERBY_ALIASES
+from lib.core.settings import CLICKHOUSE_ALIASES
 from lib.request import inject
 from plugins.generic.fingerprint import Fingerprint as GenericFingerprint
 
 class Fingerprint(GenericFingerprint):
     def __init__(self):
-        GenericFingerprint.__init__(self, DBMS.DERBY)
+        GenericFingerprint.__init__(self, DBMS.CLICKHOUSE)
 
     def getFingerprint(self):
         value = ""
@@ -36,7 +36,7 @@ class Fingerprint(GenericFingerprint):
         value += "back-end DBMS: "
 
         if not conf.extensiveFp:
-            value += DBMS.DERBY
+            value += DBMS.CLICKHOUSE
             return value
 
         actVer = Format.getDbms()
@@ -58,37 +58,34 @@ class Fingerprint(GenericFingerprint):
         return value
 
     def checkDbms(self):
-        if not conf.extensiveFp and Backend.isDbmsWithin(DERBY_ALIASES):
-            setDbms(DBMS.DERBY)
+        if not conf.extensiveFp and Backend.isDbmsWithin(CLICKHOUSE_ALIASES):
+            setDbms(DBMS.CLICKHOUSE)
 
             self.getBanner()
 
             return True
 
-        infoMsg = "testing %s" % DBMS.DERBY
+        infoMsg = "testing %s" % DBMS.CLICKHOUSE
         logger.info(infoMsg)
-
-        result = inject.checkBooleanExpression("[RANDNUM]=(SELECT [RANDNUM] FROM SYSIBM.SYSDUMMY1 OFFSET 0 ROWS FETCH FIRST 1 ROW ONLY)")
+        
+        result = inject.checkBooleanExpression("halfMD5('abcd')='16356072519128051347'")
 
         if result:
-            infoMsg = "confirming %s" % DBMS.DERBY
+            infoMsg = "confirming %s" % DBMS.CLICKHOUSE
             logger.info(infoMsg)
-
-            result = inject.checkBooleanExpression("(SELECT CURRENT SCHEMA FROM SYSIBM.SYSDUMMY1) IS NOT NULL")
+            result = inject.checkBooleanExpression("generateUUIDv4(1)!=generateUUIDv4(2)")
 
             if not result:
-                warnMsg = "the back-end DBMS is not %s" % DBMS.DERBY
-                logger.warning(warnMsg)
+                warnMsg = "the back-end DBMS is not %s" % DBMS.CLICKHOUSE
+                logger.warn(warnMsg)
 
                 return False
-
-            setDbms(DBMS.DERBY)
-
+            
+            setDbms(DBMS.CLICKHOUSE)
             self.getBanner()
-
             return True
         else:
-            warnMsg = "the back-end DBMS is not %s" % DBMS.DERBY
-            logger.warning(warnMsg)
+            warnMsg = "the back-end DBMS is not %s" % DBMS.CLICKHOUSE
+            logger.warn(warnMsg)
 
             return False

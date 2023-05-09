@@ -436,6 +436,11 @@ def main():
             logger.critical(errMsg)
             raise SystemExit
 
+        elif any(_ in errMsg for _ in (": 9.9.9#",)):
+            errMsg = "LOL :)"
+            logger.critical(errMsg)
+            raise SystemExit
+
         elif kb.get("dumpKeyboardInterrupt"):
             raise SystemExit
 
@@ -457,12 +462,17 @@ def main():
             dataToStdout(excMsg)
             raise SystemExit
 
-        elif any(_ in excMsg for _ in ("ImportError", "ModuleNotFoundError", "<frozen", "Can't find file for module", "SAXReaderNotAvailable", "source code string cannot contain null bytes", "No module named", "tp_name field", "module 'sqlite3' has no attribute 'OperationalError'")):
+        elif any(_ in excMsg for _ in ("ImportError", "ModuleNotFoundError", "<frozen", "Can't find file for module", "SAXReaderNotAvailable", "<built-in function compile> returned NULL without setting an exception", "source code string cannot contain null bytes", "No module named", "tp_name field", "module 'sqlite3' has no attribute 'OperationalError'")):
             errMsg = "invalid runtime environment ('%s')" % excMsg.split("Error: ")[-1].strip()
             logger.critical(errMsg)
             raise SystemExit
 
         elif all(_ in excMsg for _ in ("SyntaxError: Non-ASCII character", ".py on line", "but no encoding declared")):
+            errMsg = "invalid runtime environment ('%s')" % excMsg.split("Error: ")[-1].strip()
+            logger.critical(errMsg)
+            raise SystemExit
+
+        elif all(_ in excMsg for _ in ("FileNotFoundError: [Errno 2] No such file or directory", "cwd = os.getcwd()")):
             errMsg = "invalid runtime environment ('%s')" % excMsg.split("Error: ")[-1].strip()
             logger.critical(errMsg)
             raise SystemExit
@@ -543,7 +553,7 @@ def main():
     finally:
         kb.threadContinue = False
 
-        if getDaysFromLastUpdate() > LAST_UPDATE_NAGGING_DAYS:
+        if (getDaysFromLastUpdate() or 0) > LAST_UPDATE_NAGGING_DAYS:
             warnMsg = "your sqlmap version is outdated"
             logger.warning(warnMsg)
 

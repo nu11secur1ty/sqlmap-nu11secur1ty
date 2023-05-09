@@ -1511,8 +1511,7 @@ def setPaths(rootPath):
     paths.SQL_KEYWORDS = os.path.join(paths.SQLMAP_TXT_PATH, "keywords.txt")
     paths.SMALL_DICT = os.path.join(paths.SQLMAP_TXT_PATH, "smalldict.txt")
     paths.USER_AGENTS = os.path.join(paths.SQLMAP_TXT_PATH, "user-agents.txt")
-    #paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
-    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "nu11secur1ty.txt")
+    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
     paths.ERRORS_XML = os.path.join(paths.SQLMAP_XML_PATH, "errors.xml")
     paths.BOUNDARIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "boundaries.xml")
     paths.QUERIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "queries.xml")
@@ -1770,7 +1769,7 @@ def parseTargetUrl():
         errMsg = "invalid target URL port (%d)" % conf.port
         raise SqlmapSyntaxException(errMsg)
 
-    conf.url = getUnicode("%s://%s:%d%s" % (conf.scheme, ("[%s]" % conf.hostname) if conf.ipv6 else conf.hostname, conf.port, conf.path))
+    conf.url = getUnicode("%s://%s%s%s" % (conf.scheme, ("[%s]" % conf.hostname) if conf.ipv6 else conf.hostname, (":%d" % conf.port) if not (conf.port == 80 and conf.scheme == "http" or conf.port == 443 and conf.scheme == "https") else "", conf.path))
     conf.url = conf.url.replace(URI_QUESTION_MARKER, '?')
 
     if urlSplit.query:
@@ -5328,6 +5327,7 @@ def parseRequestFile(reqFile, checkParams=True):
                     continue
 
             getPostReq = False
+            forceBody = False
             url = None
             host = None
             method = None
@@ -5348,7 +5348,7 @@ def parseRequestFile(reqFile, checkParams=True):
                 line = line.strip('\r')
                 match = re.search(r"\A([A-Z]+) (.+) HTTP/[\d.]+\Z", line) if not method else None
 
-                if len(line.strip()) == 0 and method and method != HTTPMETHOD.GET and data is None:
+                if len(line.strip()) == 0 and method and (method != HTTPMETHOD.GET or forceBody) and data is None:
                     data = ""
                     params = True
 
@@ -5385,16 +5385,18 @@ def parseRequestFile(reqFile, checkParams=True):
                     elif key.upper() == HTTP_HEADER.HOST.upper():
                         if '://' in value:
                             scheme, value = value.split('://')[:2]
-                        splitValue = value.split(":")
-                        host = splitValue[0]
 
-                        if len(splitValue) > 1:
-                            port = filterStringValue(splitValue[1], "[0-9]")
+                        port = extractRegexResult(r":(?P<result>\d+)\Z", value)
+                        if port:
+                            value = value[:-(1 + len(port))]
+
+                        host = value
 
                     # Avoid to add a static content length header to
                     # headers and consider the following lines as
                     # POSTed data
                     if key.upper() == HTTP_HEADER.CONTENT_LENGTH.upper():
+                        forceBody = True
                         params = True
 
                     # Avoid proxy and connection type related headers

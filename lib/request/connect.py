@@ -752,7 +752,7 @@ class Connect(object):
 
             responseMsg += "[#%d] (%s %s):\r\n" % (threadData.lastRequestUID, code, status)
 
-            if responseHeaders:
+            if responseHeaders and getattr(responseHeaders, "headers", None):
                 logHeaders = "".join(getUnicode(responseHeaders.headers)).strip()
 
             logHTTPTraffic(requestMsg, "%s%s\r\n\r\n%s" % (responseMsg, logHeaders, (page or "")[:MAX_CONNECTION_READ_SIZE]), start, time.time())
@@ -814,7 +814,7 @@ class Connect(object):
                     debugMsg = "got HTTP error code: %d ('%s')" % (code, status)
                     logger.debug(debugMsg)
 
-        except (_urllib.error.URLError, socket.error, socket.timeout, _http_client.HTTPException, struct.error, binascii.Error, ProxyError, SqlmapCompressionException, WebSocketException, TypeError, ValueError, OverflowError, AttributeError, OSError):
+        except (_urllib.error.URLError, socket.error, socket.timeout, _http_client.HTTPException, struct.error, binascii.Error, ProxyError, SqlmapCompressionException, WebSocketException, TypeError, ValueError, OverflowError, AttributeError, OSError, AssertionError):
             tbMsg = traceback.format_exc()
 
             if conf.debug:
@@ -1333,7 +1333,7 @@ class Connect(object):
                     compile(getBytes(re.sub(r"\s*;\s*", "\n", conf.evalCode)), "", "exec")
                 except SyntaxError as ex:
                     if ex.text:
-                        original = replacement = ex.text.strip()
+                        original = replacement = getUnicode(ex.text.strip())
 
                         if '=' in original:
                             name, value = original.split('=', 1)
