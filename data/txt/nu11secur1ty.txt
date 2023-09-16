@@ -19,6 +19,7 @@ tupakpros
 maloumnik
 supertupo
 abacus
+mayurik
 admin
 adminpassword
 rootadmin
