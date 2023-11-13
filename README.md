@@ -1,4 +1,4 @@
-# sqlmap ![](https://i.imgur.com/fe85aVR.png) + # sqlmap-nu11secur1ty ![](https://i.imgur.com/fe85aVR.png)
+# sqlmap ![](https://i.imgur.com/fe85aVR.png) + sqlmap-nu11secur1ty ![](https://i.imgur.com/fe85aVR.png)
 
 <a href='https://postimg.cc/8sYJGQZK' target='_blank'><img src='https://i.postimg.cc/8sYJGQZK/New1-R250x250.png' border='0' alt='New1-R250x250'/></a>
 
