@@ -13,50 +13,78 @@ General tamper option and tamper's list
 --tamper=bypass,0eunion,apostrophemask,apostrophenullencode,appendnullbyte,base64encode,between,binary,bluecoat,chardoubleencode,charencode,charunicodeencode,charunicodeescape,commalesslimit,commalessmid,commentbeforeparentheses,concat2concatws,decentities,dunion,equaltolike,equaltorlike,escapequotes,greatest,halfversionedmorekeywords,hex2char,hexentities,htmlencode,if2case,ifnull2casewhenisnull,ifnull2ifisnull,informationschemacomment,least,lowercase,luanginx,misunion,modsecurityversioned,modsecurityzeroversioned,multiplespaces,ord2ascii,overlongutf8,overlongutf8more,percentage,plus2concat,plus2fnconcat,randomcase,randomcomments,schemasplit,scientific,sleep2getlock,sp_password,space2comment,space2dash,space2hash,space2morecomment,space2morehash,space2mssqlblank,space2mssqlhash,space2mysqlblank,space2mysqldash,space2plus,space2randomblank,substring2leftright,symboliclogical,unionalltounion,unmagicquotes,uppercase,varnish,versionedkeywords,versionedmorekeywords,xforwardedfor
 ```
 
-| Tamper | Description |
-| --- | --- |
-|apostrophemask.py | Replaces apostrophe character with its UTF-8 full width counterpart |
-|apostrophenullencode.py | Replaces apostrophe character with its illegal double unicode counterpart|
-|appendnullbyte.py | Appends encoded NULL byte character at the end of payload |
-|base64encode.py | Base64 all characters in a given payload  |
-|between.py | Replaces greater than operator ('>') with 'NOT BETWEEN 0 AND #' |
-|bluecoat.py | Replaces space character after SQL statement with a valid random blank character.Afterwards replace character = with LIKE operator  |
-|chardoubleencode.py | Double url-encodes all characters in a given payload (not processing already encoded) |
-|commalesslimit.py | Replaces instances like 'LIMIT M, N' with 'LIMIT N OFFSET M'|
-|commalessmid.py | Replaces instances like 'MID(A, B, C)' with 'MID(A FROM B FOR C)'|
-|concat2concatws.py | Replaces instances like 'CONCAT(A, B)' with 'CONCAT_WS(MID(CHAR(0), 0, 0), A, B)'|
-|charencode.py | Url-encodes all characters in a given payload (not processing already encoded)  |
-|charunicodeencode.py | Unicode-url-encodes non-encoded characters in a given payload (not processing already encoded)  |
-|equaltolike.py | Replaces all occurances of operator equal ('=') with operator 'LIKE'  |
-|escapequotes.py | Slash escape quotes (' and ") |
-|greatest.py | Replaces greater than operator ('>') with 'GREATEST' counterpart |
-|halfversionedmorekeywords.py | Adds versioned MySQL comment before each keyword  |
-|ifnull2ifisnull.py | Replaces instances like 'IFNULL(A, B)' with 'IF(ISNULL(A), B, A)'|
-|modsecurityversioned.py | Embraces complete query with versioned comment |
-|modsecurityzeroversioned.py | Embraces complete query with zero-versioned comment |
-|multiplespaces.py | Adds multiple spaces around SQL keywords |
-|nonrecursivereplacement.py | Replaces predefined SQL keywords with representations suitable for replacement (e.g. .replace("SELECT", "")) filters|
-|percentage.py | Adds a percentage sign ('%') infront of each character  |
-|overlongutf8.py | Converts all characters in a given payload (not processing already encoded) |
-|randomcase.py | Replaces each keyword character with random case value |
-|randomcomments.py | Add random comments to SQL keywords|
-|securesphere.py | Appends special crafted string|
-|sp_password.py |  Appends 'sp_password' to the end of the payload for automatic obfuscation from DBMS logs |
-|space2comment.py | Replaces space character (' ') with comments |
-|space2dash.py | Replaces space character (' ') with a dash comment ('--') followed by a random string and a new line ('\n') |
-|space2hash.py | Replaces space character (' ') with a pound character ('#') followed by a random string and a new line ('\n') |
-|space2morehash.py | Replaces space character (' ') with a pound character ('#') followed by a random string and a new line ('\n') |
-|space2mssqlblank.py | 
-|space2mssqlhash.py | 
-|space2mysqlblank.py | 
-|space2mysqldash.py | 
-|space2plus.py |  
-|space2randomblank.py | 
-|symboliclogical.py | 
-|unionalltounion.py | 
-|unmagicquotes.py | 
-|uppercase.py | 
-|varnish.py | 
+| Tamper last year | 
+| --- |
+
+
+__init__.py
+
+|apostrophemask.py |
+|apostrophenullencode.py |
+|appendnullbyte.py |
+|base64encode.py |
+|between.py |
+|binary.py |
+|bluecoat.py |
+|bypass.py |
+|chardoubleencode.py |
+|charencode.py |
+|charunicodeencode.py |
+|charunicodeescape.py |
+|commalesslimit.py |
+|commalessmid.py |
+|commentbeforeparentheses.py |
+|concat2concatws.py |
+|decentities.py |
+|dunion.py |
+|equaltolike.py |
+|equaltorlike.py |
+|escapequotes.py |
+|greatest.py |
+|halfversionedmorekeywords.py |
+|hex2char.py |
+|hexentities.py |
+|htmlencode.py |
+|if2case.py |
+|ifnull2casewhenisnull.py |
+|ifnull2ifisnull.py |
+|informationschemacomment.py |
+|least.py |
+|lowercase.py |
+|luanginx.py |
+|misunion.py |
+|modsecurityversioned.py |
+|modsecurityzeroversioned.py |
+|multiplespaces.py |
+|ord2ascii.py |
+|overlongutf8.py |
+|overlongutf8more.py |
+|percentage.py |
+|plus2concat.py |
+|plus2fnconcat.py |
+|randomcase.py |
+|randomcomments.py |
+|schemasplit.py |
+|scientific.py |
+|sleep2getlock.py |
+|sp_password.py |
+|space2comment.py |
+|space2dash.py |
+|space2hash.py |
+|space2morecomment.py |
+|space2morehash.py |
+|space2mssqlblank.py |
+|space2mssqlhash.py |
+|space2mysqlblank.py |
+|space2mysqldash.py |
+|space2plus.py |
+|space2randomblank.py |
+|substring2leftright.py |
+|symboliclogical.py |
+|unionalltounion.py |
+|unmagicquotes.py |
+|uppercase.py |
+|varnish.py |
 |versionedkeywords.py |
-|versionedmorekeywords.py | 
-|xforwardedfor.py | 
+|versionedmorekeywords.py |
+|xforwardedfor.py |
