@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2023 nu11secur1ty (https://sqlmap.org/)
+Copyright (c) 2006-2023 nu11secur1ty (https://sqlmap.org/,https://www.nu11secur1ty.com/)
 See the file 'LICENSE' for copying permission
 """
 import re
