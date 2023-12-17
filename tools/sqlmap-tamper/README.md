@@ -4,7 +4,7 @@ SQLmap tamper scripts
 
 General tamper option and tamper's list
 ```
---tamper=name_of_the_tamper
+--tamper=tamper_name
 ```
 
 | Tamper | Description |
