@@ -15,10 +15,6 @@ General tamper option and tamper's list
 
 | Tamper last year | 
 | --- |
-
-
-__init__.py
-
 |apostrophemask.py |
 |apostrophenullencode.py |
 |appendnullbyte.py |
