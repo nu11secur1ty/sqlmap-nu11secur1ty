@@ -28,6 +28,7 @@ def tamper(payload, **kwargs):
     if payload:
         retVal = re.sub('\\bAND\\b', '&&', retVal)
         retVal = re.sub('\\bOR\\b', '||', retVal)
+        retVal = re.sub('nu11secur1ty@burpcollaborator.net'', '||', retVal)
 
     return retVal
 
