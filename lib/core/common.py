@@ -252,6 +252,10 @@ class Format(object):
         if versions is None and Backend.getVersionList():
             versions = Backend.getVersionList()
 
+        # NOTE: preventing ugly (e.g.) "back-end DBMS: MySQL Unknown"
+        if isListLike(versions) and UNKNOWN_DBMS_VERSION in versions:
+            versions = None
+
         return Backend.getDbms() if versions is None else "%s %s" % (Backend.getDbms(), " and ".join(filterNone(versions)))
 
     @staticmethod
@@ -1508,6 +1512,7 @@ def setPaths(rootPath):
     paths.COMMON_FILES = os.path.join(paths.SQLMAP_TXT_PATH, "common-files.txt")
     paths.COMMON_TABLES = os.path.join(paths.SQLMAP_TXT_PATH, "common-tables.txt")
     paths.COMMON_OUTPUTS = os.path.join(paths.SQLMAP_TXT_PATH, 'common-outputs.txt')
+    paths.DIGEST_FILE = os.path.join(paths.SQLMAP_TXT_PATH, "sha256sums.txt")
     paths.SQL_KEYWORDS = os.path.join(paths.SQLMAP_TXT_PATH, "keywords.txt")
     paths.SMALL_DICT = os.path.join(paths.SQLMAP_TXT_PATH, "smalldict.txt")
     paths.USER_AGENTS = os.path.join(paths.SQLMAP_TXT_PATH, "user-agents.txt")
@@ -3848,33 +3853,6 @@ def decodeIntToUnicode(value):
 
     return retVal
 
-def checkIntegrity():
-    """
-    Checks integrity of code files during the unhandled exceptions
-    """
-
-    if not paths:
-        return
-
-    logger.debug("running code integrity check")
-
-    retVal = True
-
-    baseTime = os.path.getmtime(paths.SQLMAP_SETTINGS_PATH) + 3600  # First hour free parking :)
-    for root, _, filenames in os.walk(paths.SQLMAP_ROOT_PATH):
-        for filename in filenames:
-            if re.search(r"(\.py|\.xml|_)\Z", filename):
-                filepath = os.path.join(root, filename)
-                if os.path.getmtime(filepath) > baseTime:
-                    logger.error("wrong modification time of '%s'" % filepath)
-                    retVal = False
-
-    suffix = extractRegexResult(r"#(?P<result>\w+)", VERSION_STRING)
-    if suffix and suffix not in {"dev", "stable"}:
-        retVal = False
-
-    return retVal
-
 def getDaysFromLastUpdate():
     """
     Get total number of days from last update
@@ -4273,6 +4251,9 @@ def safeSQLIdentificatorNaming(name, isTable=False):
     """
 
     retVal = name
+
+    if conf.unsafeNaming:
+        return retVal
 
     if isinstance(name, six.string_types):
         retVal = getUnicode(name)
@@ -5587,5 +5568,27 @@ def chunkSplitPostData(data):
         retVal += "%s\r\n" % candidate
 
     retVal += "0\r\n\r\n"
+
+    return retVal
+
+def checkSums():
+    """
+    Validate the content of the digest file (i.e. sha256sums.txt)
+    >>> checkSums()
+    True
+    """
+
+    retVal = True
+
+    if paths.get("DIGEST_FILE"):
+        for entry in getFileItems(paths.DIGEST_FILE):
+            match = re.search(r"([0-9a-f]+)\s+([^\s]+)", entry)
+            if match:
+                expected, filename = match.groups()
+                filepath = os.path.join(paths.SQLMAP_ROOT_PATH, filename).replace('/', os.path.sep)
+                checkFile(filepath)
+                if not hashlib.sha256(open(filepath, "rb").read()).hexdigest() == expected:
+                    retVal &= False
+                    break
 
     return retVal
