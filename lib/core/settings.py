@@ -20,7 +20,7 @@ from thirdparty import six
 from thirdparty.six import unichr as _unichr
 
 # sqlmap version (<major>.<minor>.<month>.<monthly commit>)
-VERSION = "1.8.3.13"
+VERSION = "1.8.3.15"
 TYPE = "dev" if VERSION.count('.') > 2 and VERSION.split('.')[-1] != '0' else "stable"
 TYPE_COLORS = {"dev": 33, "stable": 90, "pip": 34}
 VERSION_STRING = "sqlmap/%s#%s" % ('.'.join(VERSION.split('.')[:-1]) if VERSION.count('.') > 2 and VERSION.split('.')[-1] == '0' else VERSION, TYPE)
@@ -53,11 +53,6 @@ BANNER = """\033[01;33m\
 \033[0m\033[4;37m%s\033[0m\n   
 
 """ % (TYPE_COLORS.get(TYPE, 31), VERSION_STRING.split('/')[-1], SITE)
-
-
-# Minimum distance of ratio from kb.matchRatio to result in True
-DIFF_TOLERANCE = 0.05
-CONSTANT_RATIO = 0.9
 
 # Ratio used in heuristic check for WAF/IPS protected targets
 IPS_WAF_CHECK_RATIO = 0.5
