@@ -136,6 +136,7 @@ from lib.core.settings import HTTP_CHUNKED_SPLIT_KEYWORDS
 from lib.core.settings import IGNORE_PARAMETERS
 from lib.core.settings import IGNORE_SAVE_OPTIONS
 from lib.core.settings import INFERENCE_UNKNOWN_CHAR
+from lib.core.settings import INJECT_HERE_REGEX
 from lib.core.settings import IP_ADDRESS_REGEX
 from lib.core.settings import ISSUES_PAGE
 from lib.core.settings import IS_TTY
@@ -1527,7 +1528,7 @@ def setPaths(rootPath):
     paths.SQL_KEYWORDS = os.path.join(paths.SQLMAP_TXT_PATH, "keywords.txt")
     paths.SMALL_DICT = os.path.join(paths.SQLMAP_TXT_PATH, "smalldict.txt")
     paths.USER_AGENTS = os.path.join(paths.SQLMAP_TXT_PATH, "user-agents.txt")
-    ### paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
+    # paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
     paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "nu11secur1ty.txt")
     paths.ERRORS_XML = os.path.join(paths.SQLMAP_XML_PATH, "errors.xml")
     paths.BOUNDARIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "boundaries.xml")
@@ -4648,7 +4649,7 @@ def isAdminFromPrivileges(privileges):
 
     return retVal
 
-def findPageForms(content, url, raise_=False, addToTargets=False):
+def findPageForms(content, url, raiseException=False, addToTargets=False):
     """
     Parses given page content for possible forms (Note: still not implemented for Python3)
 
@@ -4666,7 +4667,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
 
     if not content:
         errMsg = "can't parse forms as the page content appears to be blank"
-        if raise_:
+        if raiseException:
             raise SqlmapGenericException(errMsg)
         else:
             logger.debug(errMsg)
@@ -4688,7 +4689,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
                     forms = ParseResponse(filtered, backwards_compat=False)
                 except:
                     errMsg = "no success"
-                    if raise_:
+                    if raiseException:
                         raise SqlmapGenericException(errMsg)
                     else:
                         logger.debug(errMsg)
@@ -4715,7 +4716,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
         except (ValueError, TypeError) as ex:
             errMsg = "there has been a problem while "
             errMsg += "processing page forms ('%s')" % getSafeExString(ex)
-            if raise_:
+            if raiseException:
                 raise SqlmapGenericException(errMsg)
             else:
                 logger.debug(errMsg)
@@ -4767,7 +4768,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
 
     if not retVal and not conf.crawlDepth:
         errMsg = "there were no forms found at the given target URL"
-        if raise_:
+        if raiseException:
             raise SqlmapGenericException(errMsg)
         else:
             logger.debug(errMsg)
@@ -5276,6 +5277,9 @@ def parseRequestFile(reqFile, checkParams=True):
         Parses WebScarab logs (POST method not supported)
         """
 
+        if WEBSCARAB_SPLITTER not in content:
+            return
+
         reqResList = content.split(WEBSCARAB_SPLITTER)
 
         for request in reqResList:
@@ -5359,6 +5363,8 @@ def parseRequestFile(reqFile, checkParams=True):
                 if not line.strip() and index == len(lines) - 1:
                     break
 
+                line = re.sub(INJECT_HERE_REGEX, CUSTOM_INJECTION_MARK_CHAR, line)
+
                 newline = "\r\n" if line.endswith('\r') else '\n'
                 line = line.strip('\r')
                 match = re.search(r"\A([A-Z]+) (.+) HTTP/[\d.]+\Z", line) if not method else None
@@ -5403,9 +5409,9 @@ def parseRequestFile(reqFile, checkParams=True):
 
                         port = extractRegexResult(r":(?P<result>\d+)\Z", value)
                         if port:
-                            value = value[:-(1 + len(port))]
-
-                        host = value
+                            host = value[:-(1 + len(port))]
+                        else:
+                            host = value
 
                     # Avoid to add a static content length header to
                     # headers and consider the following lines as

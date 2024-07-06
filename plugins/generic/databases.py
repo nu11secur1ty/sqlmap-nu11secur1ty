@@ -325,7 +325,7 @@ class Databases(object):
 
                     if not isNoneValue(table):
                         db = safeSQLIdentificatorNaming(db)
-                        table = safeSQLIdentificatorNaming(table, True)
+                        table = safeSQLIdentificatorNaming(table, True).strip()
 
                         if conf.getComments:
                             _ = queries[Backend.getIdentifiedDbms()].table_comment
