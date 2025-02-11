@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -435,7 +435,7 @@ def _setStdinPipeTargets():
             def next(self):
                 try:
                     line = next(conf.stdinPipe)
-                except (IOError, OSError, TypeError):
+                except (IOError, OSError, TypeError, UnicodeDecodeError):
                     line = None
 
                 if line:
@@ -812,6 +812,7 @@ def _setTamperingFunctions():
                 raise SqlmapSyntaxException("cannot import tamper module '%s' (%s)" % (getUnicode(filename[:-3]), getSafeExString(ex)))
 
             priority = PRIORITY.NORMAL if not hasattr(module, "__priority__") else module.__priority__
+            priority = priority if priority is not None else PRIORITY.LOWEST
 
             for name, function in inspect.getmembers(module, inspect.isfunction):
                 if name == "tamper" and (hasattr(inspect, "signature") and all(_ in inspect.signature(function).parameters for _ in ("payload", "kwargs")) or inspect.getargspec(function).args and inspect.getargspec(function).keywords == "kwargs"):
@@ -2090,6 +2091,7 @@ def _setKnowledgeBaseAttributes(flushAll=True):
     kb.headersFp = {}
     kb.heuristicDbms = None
     kb.heuristicExtendedDbms = None
+    kb.heuristicCode = None
     kb.heuristicMode = False
     kb.heuristicPage = False
     kb.heuristicTest = None

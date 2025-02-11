@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2024 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
 See the file 'LICENSE' for copying permission
 """
 
@@ -115,7 +115,7 @@ class Entries(object):
             if kb.dumpKeyboardInterrupt:
                 break
 
-            if conf.exclude and re.search(conf.exclude, tbl, re.I) is not None:
+            if conf.exclude and re.search(conf.exclude, unsafeSQLIdentificatorNaming(tbl), re.I) is not None:
                 infoMsg = "skipping table '%s'" % unsafeSQLIdentificatorNaming(tbl)
                 singleTimeLogMessage(infoMsg)
                 continue
@@ -459,12 +459,15 @@ class Entries(object):
                     kb.data.dumpedTable["__infos__"] = {"count": entriesCount,
                                                         "table": safeSQLIdentificatorNaming(tbl, True),
                                                         "db": safeSQLIdentificatorNaming(conf.db)}
-                    try:
-                        attackDumpedTable()
-                    except (IOError, OSError) as ex:
-                        errMsg = "an error occurred while attacking "
-                        errMsg += "table dump ('%s')" % getSafeExString(ex)
-                        logger.critical(errMsg)
+
+                    if not conf.disableHashing:
+                        try:
+                            attackDumpedTable()
+                        except (IOError, OSError) as ex:
+                            errMsg = "an error occurred while attacking "
+                            errMsg += "table dump ('%s')" % getSafeExString(ex)
+                            logger.critical(errMsg)
+
                     conf.dumper.dbTableValues(kb.data.dumpedTable)
 
             except SqlmapConnectionException as ex:
