@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org/)
+Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -774,6 +774,9 @@ def cmdLineParser(argv=None):
 
         miscellaneous.add_argument("--no-logging", dest="noLogging", action="store_true",
             help="Disable logging to a file")
+
+        miscellaneous.add_argument("--no-truncate", dest="noTruncate", action="store_true",
+            help="Disable console output truncation (e.g. long entr...)")
 
         miscellaneous.add_argument("--offline", dest="offline", action="store_true",
             help="Work in offline mode (only use session data)")
