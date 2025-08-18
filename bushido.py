@@ -7,7 +7,7 @@ Author       : nu11secur1ty
 Mode         : 2025
 Description  : Automatically runs all exploits in exploit_env
                with sqlmap-nu11secur1ty, preserves colorized output,
-               and exits cleanly on Ctrl+C.
+               supports resuming from last exploit, and exits cleanly on Ctrl+C.
 ==================================================
 """
 
@@ -15,10 +15,6 @@ import os
 import subprocess
 from datetime import datetime
 import sys
-
-# === ANSI color codes ===
-CYAN = "\033[96m"
-RESET = "\033[0m"
 
 def clean_exit(message=None, code=0):
     ts = datetime.now().strftime("%H:%M:%S /%Y-%m-%d/")
@@ -31,6 +27,7 @@ def clean_exit(message=None, code=0):
 base_dir = os.path.dirname(os.path.abspath(__file__))
 sqlmap_path = os.path.join(base_dir, "sqlmap.py")
 exploit_dir = os.path.join(base_dir, "exploit_env")
+resume_file = os.path.join(exploit_dir, "completed_exploits.txt")
 
 # === Checks ===
 if not os.path.isfile(sqlmap_path):
@@ -42,12 +39,20 @@ exploit_files = [f for f in os.listdir(exploit_dir) if f.endswith(".txt")]
 if not exploit_files:
     clean_exit(f"[!] No .txt exploit files found in {exploit_dir}", 1)
 
+# === Load completed exploits ===
+completed_exploits = set()
+if os.path.isfile(resume_file):
+    with open(resume_file, "r") as f:
+        completed_exploits = set(line.strip() for line in f if line.strip())
+
 try:
     for idx, exploit_file in enumerate(exploit_files, start=1):
-        exploit_path = os.path.join(exploit_dir, exploit_file)
+        if exploit_file in completed_exploits:
+            print(f"[i] Skipping already completed exploit: {exploit_file}")
+            continue
 
-        # === Colorized status line only ===
-        print(f"{CYAN}[{idx}/{len(exploit_files)}] Running sqlmap-nu11secur1ty with exploit: {exploit_file}{RESET}")
+        exploit_path = os.path.join(exploit_dir, exploit_file)
+        print(f"\033[1;36m[{idx}/{len(exploit_files)}] Running sqlmap-nu11secur1ty with exploit: {exploit_file}\033[0m")
 
         cmd = [
             sys.executable, sqlmap_path,
@@ -63,7 +68,7 @@ try:
             '--dump'
         ]
 
-        # Run sqlmap directly to preserve its colorized output
+        # Run sqlmap directly to preserve color
         process = subprocess.Popen(cmd)
         process.wait()
 
@@ -71,6 +76,9 @@ try:
             print(f"[!] sqlmap exited with error on {exploit_file}")
         else:
             print(f"[+] Finished exploit: {exploit_file}\n")
+            # Save completed exploit
+            with open(resume_file, "a") as f:
+                f.write(exploit_file + "\n")
 
 except KeyboardInterrupt:
     clean_exit("[!] Interrupted by user", 1)
