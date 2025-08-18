@@ -7,7 +7,7 @@ Author       : nu11secur1ty
 Mode         : 2025
 Description  : Automatically runs all exploits in exploit_env
                with sqlmap-nu11secur1ty, preserves colorized output,
-               logs results, and exits cleanly on Ctrl+C.
+               and exits cleanly on Ctrl+C.
 ==================================================
 """
 
@@ -38,13 +38,9 @@ exploit_files = [f for f in os.listdir(exploit_dir) if f.endswith(".txt")]
 if not exploit_files:
     clean_exit(f"[!] No .txt exploit files found in {exploit_dir}", 1)
 
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
 try:
     for idx, exploit_file in enumerate(exploit_files, start=1):
         exploit_path = os.path.join(exploit_dir, exploit_file)
-        log_file = os.path.join(base_dir, f"{exploit_file}_{timestamp}_log.txt")
-        
         print(f"[{idx}/{len(exploit_files)}] Running sqlmap with exploit: {exploit_file}")
 
         cmd = [
@@ -68,7 +64,7 @@ try:
         if process.returncode != 0:
             print(f"[!] sqlmap exited with error on {exploit_file}")
         else:
-            print(f"[+] Finished exploit: {exploit_file}, log saved to {log_file}\n")
+            print(f"[+] Finished exploit: {exploit_file}\n")
 
 except KeyboardInterrupt:
     clean_exit("[!] Interrupted by user", 1)
