@@ -16,6 +16,10 @@ import subprocess
 from datetime import datetime
 import sys
 
+# === ANSI color codes ===
+CYAN = "\033[96m"
+RESET = "\033[0m"
+
 def clean_exit(message=None, code=0):
     ts = datetime.now().strftime("%H:%M:%S /%Y-%m-%d/")
     if message:
@@ -41,7 +45,9 @@ if not exploit_files:
 try:
     for idx, exploit_file in enumerate(exploit_files, start=1):
         exploit_path = os.path.join(exploit_dir, exploit_file)
-        print(f"[{idx}/{len(exploit_files)}] Running sqlmap with exploit: {exploit_file}")
+
+        # === Colorized status line only ===
+        print(f"{CYAN}[{idx}/{len(exploit_files)}] Running sqlmap-nu11secur1ty with exploit: {exploit_file}{RESET}")
 
         cmd = [
             sys.executable, sqlmap_path,
@@ -57,7 +63,7 @@ try:
             '--dump'
         ]
 
-        # Run sqlmap directly to preserve color
+        # Run sqlmap directly to preserve its colorized output
         process = subprocess.Popen(cmd)
         process.wait()
 
