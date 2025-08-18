@@ -7,7 +7,8 @@ Author       : nu11secur1ty
 Mode         : 2025
 Description  : Automatically runs all exploits in exploit_env
                with sqlmap-nu11secur1ty, preserves colorized output,
-               supports resuming from last exploit, and exits cleanly on Ctrl+C.
+               shows target vulnerable parameter, supports resuming,
+               and exits cleanly on Ctrl+C.
 ==================================================
 """
 
@@ -53,6 +54,22 @@ try:
 
         exploit_path = os.path.join(exploit_dir, exploit_file)
         print(f"\033[1;36m[{idx}/{len(exploit_files)}] Running sqlmap-nu11secur1ty with exploit: {exploit_file}\033[0m")
+
+        # === Extract vulnerable parameter ===
+        vulnerable_param = None
+        with open(exploit_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("GET") and "?" in line:
+                    query = line.split(" ", 2)[1].split("?", 1)[1]
+                    vulnerable_param = query.split("&")[0].split("=")[0]
+                    break
+                elif "=" in line and not line.startswith(("POST", "HTTP")):
+                    vulnerable_param = line.split("&")[0].split("=")[0]
+                    break
+
+        if vulnerable_param:
+            print(f"       \033[1;33mTarget parameter: {vulnerable_param}\033[0m")
 
         cmd = [
             sys.executable, sqlmap_path,
