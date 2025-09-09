@@ -513,6 +513,11 @@ def main():
             logger.critical(errMsg)
             raise SystemExit
 
+        elif "'cryptography' package is required" in excMsg:
+            errMsg = "third-party library 'cryptography' is required"
+            logger.critical(errMsg)
+            raise SystemExit
+
         elif "AttributeError: 'module' object has no attribute 'F_GETFD'" in excMsg:
             errMsg = "invalid runtime (\"%s\") " % excMsg.split("Error: ")[-1].strip()
             errMsg += "(Reference: 'https://stackoverflow.com/a/38841364' & 'https://bugs.python.org/issue24944#msg249231')"
@@ -543,7 +548,7 @@ def main():
         errMsg = maskSensitiveData(errMsg)
         excMsg = maskSensitiveData(excMsg)
 
-        if conf.get("api") or not valid or kb.lastCtrlCTime:
+        if conf.get("api") or not valid or kb.get("lastCtrlCTime"):
             logger.critical("%s\n%s" % (errMsg, excMsg))
         else:
             logger.critical(errMsg)
@@ -562,17 +567,17 @@ def main():
 
         kb.threadException = True
 
-        if kb.get("tempDir"):
+        for tempDir in conf.get("tempDirs", []):
             for prefix in (MKSTEMP_PREFIX.IPC, MKSTEMP_PREFIX.TESTING, MKSTEMP_PREFIX.COOKIE_JAR, MKSTEMP_PREFIX.BIG_ARRAY):
-                for filepath in glob.glob(os.path.join(kb.tempDir, "%s*" % prefix)):
+                for filepath in glob.glob(os.path.join(tempDir, "%s*" % prefix)):
                     try:
                         os.remove(filepath)
                     except OSError:
                         pass
 
-            if not filterNone(filepath for filepath in glob.glob(os.path.join(kb.tempDir, '*')) if not any(filepath.endswith(_) for _ in (".lock", ".exe", ".so", '_'))):  # ignore junk files
+            if any((conf.vulnTest, conf.smokeTest)) or not filterNone(filepath for filepath in glob.glob(os.path.join(tempDir, '*')) if not any(filepath.endswith(_) for _ in (".lock", ".exe", ".so", '_'))):  # ignore junk files
                 try:
-                    shutil.rmtree(kb.tempDir, ignore_errors=True)
+                    shutil.rmtree(tempDir, ignore_errors=True)
                 except OSError:
                     pass
 

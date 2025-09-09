@@ -116,15 +116,16 @@ class BigArray(list):
             self.append(_)
 
     def pop(self):
-        if len(self.chunks[-1]) < 1:
-            self.chunks.pop()
-            try:
-                with open(self.chunks[-1], "rb") as f:
-                    self.chunks[-1] = pickle.loads(zlib.decompress(f.read()))
-            except IOError as ex:
-                errMsg = "exception occurred while retrieving data "
-                errMsg += "from a temporary file ('%s')" % ex
-                raise SqlmapSystemException(errMsg)
+        with self._lock:
+            if not self.chunks[-1] and len(self.chunks) > 1:
+                self.chunks.pop()
+                try:
+                    with open(self.chunks[-1], "rb") as f:
+                        self.chunks[-1] = pickle.loads(zlib.decompress(f.read()))
+                except IOError as ex:
+                    errMsg = "exception occurred while retrieving data "
+                    errMsg += "from a temporary file ('%s')" % ex
+                    raise SqlmapSystemException(errMsg)
 
         return self.chunks[-1].pop()
 
@@ -163,6 +164,9 @@ class BigArray(list):
             raise SqlmapSystemException(errMsg)
 
     def _checkcache(self, index):
+        if self.cache is not None and not isinstance(self.cache, Cache):
+            self.cache = None
+
         if (self.cache and self.cache.index != index and self.cache.dirty):
             filename = self._dump(self.cache.data)
             self.chunks[self.cache.index] = filename

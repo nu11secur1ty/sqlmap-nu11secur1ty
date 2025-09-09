@@ -177,6 +177,9 @@ def cmdLineParser(argv=None):
         request.add_argument("--drop-set-cookie", dest="dropSetCookie", action="store_true",
             help="Ignore Set-Cookie header from response")
 
+        request.add_argument("--http1.0", dest="http10", action="store_true",
+            help="Use HTTP version 1.0 (old)")
+
         request.add_argument("--http2", dest="http2", action="store_true",
             help="Use HTTP version 2 (experimental)")
 
@@ -407,6 +410,9 @@ def cmdLineParser(argv=None):
 
         techniques.add_argument("--time-sec", dest="timeSec", type=int,
             help="Seconds to delay the DBMS response (default %d)" % defaults.timeSec)
+
+        techniques.add_argument("--disable-stats", dest="disableStats", action="store_true",
+            help="Disable the statistical model for detecting the delay")
 
         techniques.add_argument("--union-cols", dest="uCols",
             help="Range of columns to test for UNION query SQL injection")
@@ -825,9 +831,6 @@ def cmdLineParser(argv=None):
             help=SUPPRESS)
 
         parser.add_argument("--disable-precon", dest="disablePrecon", action="store_true",
-            help=SUPPRESS)
-
-        parser.add_argument("--disable-stats", dest="disableStats", action="store_true",
             help=SUPPRESS)
 
         parser.add_argument("--profile", dest="profile", action="store_true",

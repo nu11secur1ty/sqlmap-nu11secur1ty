@@ -108,6 +108,8 @@ class FORK(object):
     YUGABYTEDB = "YugabyteDB"
     OPENGAUSS = "OpenGauss"
     DM8 = "DM8"
+    DORIS = "Doris"
+    STARROCKS = "StarRocks"
 
 class CUSTOM_LOGGING(object):
     PAYLOAD = 9
@@ -192,11 +194,12 @@ class HASH(object):
     APACHE_SHA1 = r'\A\{SHA\}[a-zA-Z0-9+/]+={0,2}\Z'
     VBULLETIN = r'\A[0-9a-fA-F]{32}:.{30}\Z'
     VBULLETIN_OLD = r'\A[0-9a-fA-F]{32}:.{3}\Z'
+    OSCOMMERCE_OLD = r'\A[0-9a-fA-F]{32}:.{2}\Z'
     SSHA = r'\A\{SSHA\}[a-zA-Z0-9+/]+={0,2}\Z'
     SSHA256 = r'\A\{SSHA256\}[a-zA-Z0-9+/]+={0,2}\Z'
     SSHA512 = r'\A\{SSHA512\}[a-zA-Z0-9+/]+={0,2}\Z'
-    DJANGO_MD5 = r'\Amd5\$[^$]+\$[0-9a-f]{32}\Z'
-    DJANGO_SHA1 = r'\Asha1\$[^$]+\$[0-9a-f]{40}\Z'
+    DJANGO_MD5 = r'\Amd5\$[^$]*\$[0-9a-f]{32}\Z'
+    DJANGO_SHA1 = r'\Asha1\$[^$]*\$[0-9a-f]{40}\Z'
     MD5_BASE64 = r'\A[a-zA-Z0-9+/]{22}==\Z'
     SHA1_BASE64 = r'\A[a-zA-Z0-9+/]{27}=\Z'
     SHA256_BASE64 = r'\A[a-zA-Z0-9+/]{43}=\Z'

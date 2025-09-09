@@ -103,6 +103,10 @@ class Fingerprint(GenericFingerprint):
                 fork = FORK.DRIZZLE
             elif inject.checkBooleanExpression("@@VERSION_COMMENT LIKE '%Percona%'"):
                 fork = FORK.PERCONA
+            elif inject.checkBooleanExpression("@@VERSION_COMMENT LIKE '%Doris%'"):
+                fork = FORK.DORIS
+            elif inject.checkBooleanExpression("@@VERSION_COMMENT LIKE '%StarRocks%'"):
+                fork = FORK.STARROCKS
             elif inject.checkBooleanExpression("AURORA_VERSION() LIKE '%'"):            # Reference: https://aws.amazon.com/premiumsupport/knowledge-center/aurora-version-number/
                 fork = FORK.AURORA
             else:
@@ -188,7 +192,7 @@ class Fingerprint(GenericFingerprint):
             infoMsg = "confirming %s" % DBMS.MYSQL
             logger.info(infoMsg)
 
-            result = inject.checkBooleanExpression("SESSION_USER() LIKE USER()")
+            result = inject.checkBooleanExpression("COALESCE(SESSION_USER(),USER()) IS NOT NULL")
 
             if not result:
                 # Note: MemSQL doesn't support SESSION_USER()

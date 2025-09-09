@@ -1529,8 +1529,7 @@ def setPaths(rootPath):
     paths.SQL_KEYWORDS = os.path.join(paths.SQLMAP_TXT_PATH, "keywords.txt")
     paths.SMALL_DICT = os.path.join(paths.SQLMAP_TXT_PATH, "smalldict.txt")
     paths.USER_AGENTS = os.path.join(paths.SQLMAP_TXT_PATH, "user-agents.txt")
-    # paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
-    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "nu11secur1ty.txt")
+    paths.WORDLIST = os.path.join(paths.SQLMAP_TXT_PATH, "wordlist.tx_")
     paths.ERRORS_XML = os.path.join(paths.SQLMAP_XML_PATH, "errors.xml")
     paths.BOUNDARIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "boundaries.xml")
     paths.QUERIES_XML = os.path.join(paths.SQLMAP_XML_PATH, "queries.xml")
@@ -1684,11 +1683,7 @@ def parseTargetDirect():
                 elif dbmsName == DBMS.PGSQL:
                     __import__("psycopg2")
                 elif dbmsName == DBMS.ORACLE:
-                    __import__("cx_Oracle")
-
-                    # Reference: http://itsiti.com/ora-28009-connection-sys-sysdba-sysoper
-                    if (conf.dbmsUser or "").upper() == "SYS":
-                        conf.direct = "%s?mode=SYSDBA" % conf.direct
+                    __import__("oracledb")
                 elif dbmsName == DBMS.SQLITE:
                     __import__("sqlite3")
                 elif dbmsName == DBMS.ACCESS:
