@@ -1,4 +1,4 @@
-# MSF Module Generator (`sqlmap-nu11secur1ty`) — Full Usage Guide
+# MSF Module Generator (`sqlmap-nu11secur1ty`) — Kali Linux
 
 **Author:** nu11secur1ty  
 **Description:** Generate Metasploit auxiliary modules from Burp Suite requests and run `sqlmap-nu11secur1ty` automatically.  
