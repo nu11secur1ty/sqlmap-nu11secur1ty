@@ -42,8 +42,8 @@ class MetasploitModule < Msf::Auxiliary
     sqlmap_path = File.join(module_dir, '..', 'sqlmap.py')
 
     if File.exist?(sqlmap_path)
-      sqlmap_cmd = "python3 \#{sqlmap_path} -r \#{request_file} --batch --level=1"
-      print_status("Executing: \#{sqlmap_cmd}")
+      sqlmap_cmd = "python3 \#{{sqlmap_path}} -r \#{{request_file}} --batch --level=1"
+      print_status("Executing: \#{{sqlmap_cmd}}")
       system(sqlmap_cmd)
     else
       print_error("sqlmap.py not found in parent directory")
@@ -53,25 +53,17 @@ end
 '''
 
 def generate_module(output_path, module_name, author, description, raw_request):
-    # Escape backslashes in Ruby string (safe for writing exploit.txt)
-    escaped_request = raw_request.replace('\\', '\\\\')
-
-    # Escape any literal curly braces in Ruby code
-    safe_template = MODULE_TEMPLATE.replace('{|', '{{|').replace('|}', '|}}')
-
-    content = safe_template.format(
-        module_name=module_name,
-        author=author,
-        description=description
-    )
-
     try:
         # Write .rb module
         with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+            f.write(MODULE_TEMPLATE.format(
+                module_name=module_name,
+                author=author,
+                description=description
+            ))
         print(f"[+] Module saved to {output_path}")
 
-        # Write exploit.txt
+        # Write exploit.txt with raw request
         exploit_txt_path = output_path.replace('.rb', '_exploit.txt')
         with open(exploit_txt_path, 'w', encoding='utf-8') as f:
             f.write(raw_request)
