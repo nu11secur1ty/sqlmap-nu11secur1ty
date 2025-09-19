@@ -86,7 +86,8 @@ sudo cp /path/to/exploit.txt /usr/share/metasploit-framework/modules/auxiliary/M
 
 `Follow` the Generator...
 
--Ensure proper permissions (Metasploit needs read access):
+- Ensure proper permissions (Metasploit needs read access):
+- - NOTE: This is by default, after creation!
 ```
 sudo chmod 644 /usr/share/metasploit-framework/modules/auxiliary/MSF/MyModule.rb
 ```
