@@ -41,7 +41,9 @@ class MetasploitModule < Msf::Auxiliary
     Dir.mkdir(exploit_dir) unless Dir.exist?(exploit_dir)
     request_file = File.join(exploit_dir, "exploit.txt")
 
-    File.open(request_file, "w") { |f| f.write(raw_request) }
+    File.open(request_file, "w") do |f|
+      f.write(raw_request)
+    end
     print_status("exploit.txt saved to #{request_file}")
 
     # Path to sqlmap
@@ -58,43 +60,41 @@ class MetasploitModule < Msf::Auxiliary
 end
 '''
 
-def generate_module(output_file, module_name, author, description, raw_request):
-    # Fix filename duplicates
-    if not output_file.endswith(".rb"):
-        output_file += ".rb"
-
+def generate_module(output_path, module_name, author, description, raw_request, msf_dir=None):
     content = MODULE_TEMPLATE.format(
         module_name=module_name,
         author=author,
         description=description
     )
 
-    # Write .rb in local folder first
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(content)
+    # Save .rb module in current folder first
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"[+] Module saved to {output_path}")
+    except Exception as e:
+        print(f"[!] Failed to write module: {e}")
+        return
 
-    print(f"[+] Module saved locally as {output_file}")
+    # Save exploit.txt
+    exploit_txt = os.path.join(os.path.dirname(output_path), "exploit.txt")
+    try:
+        with open(exploit_txt, "w", encoding="utf-8") as f:
+            f.write(raw_request)
+        print(f"[+] exploit.txt saved to {exploit_txt}")
+    except Exception as e:
+        print(f"[!] Failed to save exploit.txt: {e}")
 
-    # Save exploit.txt in user's home folder
-    exploit_dir = os.path.join(os.path.expanduser("~"), ".msf_exploits")
-    os.makedirs(exploit_dir, exist_ok=True)
-    exploit_path = os.path.join(exploit_dir, "exploit.txt")
-    with open(exploit_path, 'w', encoding='utf-8') as f:
-        f.write(raw_request)
-
-    print(f"[+] exploit.txt saved to {exploit_path}")
-
-    # Detect MSF auxiliary module path
-    msf_path_default = "/usr/share/metasploit-framework/modules/auxiliary/MSF/"
-    if os.path.exists(msf_path_default):
-        msf_file_path = os.path.join(msf_path_default, os.path.basename(output_file))
+    # Optionally move to MSF directory
+    if msf_dir and os.path.isdir(msf_dir):
         try:
-            shutil.copy2(output_file, msf_file_path)
-            print(f"[+] Module copied to MSF directory: {msf_file_path}")
+            shutil.copy(output_path, msf_dir)
+            shutil.copy(exploit_txt, msf_dir)
+            print(f"[+] Module and exploit.txt copied to {msf_dir}")
         except PermissionError:
-            print(f"[!] Cannot copy to MSF directory, sudo may be required: {msf_file_path}")
-    else:
-        print("[!] MSF directory not found, .rb module only saved locally.")
+            print(f"[!] Permission denied. Try running with sudo to copy files to {msf_dir}")
+        except Exception as e:
+            print(f"[!] Failed to copy files to MSF directory: {e}")
 
 if __name__ == "__main__":
     print("=== MSF .rb Module Generator (sqlmap-nu11secur1ty) ===")
@@ -112,4 +112,8 @@ if __name__ == "__main__":
         lines.append(line)
     raw_request = "\n".join(lines)
 
-    generate_module(output_file, module_name, author, description, raw_request)
+    msf_dir = input("Enter full path to MSF module directory (optional, leave empty to skip): ").strip()
+    if msf_dir == "":
+        msf_dir = None
+
+    generate_module(output_file, module_name, author, description, raw_request, msf_dir)
