@@ -1,29 +1,21 @@
 #!/usr/bin/env python3
 """
-Python generator for Metasploit auxiliary modules with sqlmap-nu11secur1ty.
-Users input a Burp request, and the generator creates:
-- a .rb MSF module
-- exploit.txt will be generated when running the module
+MSF .rb Module Generator for sqlmap-nu11secur1ty
+Author: nu11secur1ty
+Description: Generate Metasploit auxiliary modules from Burp requests
+             and execute sqlmap-nu11secur1ty automatically.
 """
 
-import os
-
-MODULE_TEMPLATE = r'''##
-# {module_name}.rb
-#
-# Author: {author}
-# Description: {description}
-##
-
+MODULE_TEMPLATE = r'''
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
 
   def initialize
     super(
-      'Name'        => '{module_name}',
-      'Description' => '{description}',
-      'Author'      => '{author}',
-      'License'     => MSF_LICENSE
+      'Name'           => '{module_name}',
+      'Description'    => '{description}',
+      'Author'         => '{author}',
+      'License'        => MSF_LICENSE
     )
 
     register_options(
@@ -45,15 +37,13 @@ class MetasploitModule < Msf::Auxiliary
 
     module_dir = File.expand_path(File.dirname(__FILE__))
     request_file = File.join(module_dir, "exploit.txt")
-
-    # Correct Ruby block syntax
-    File.open(request_file, "w") { |f| f.write(raw_request) }
+    File.open(request_file, "w") {{ |f| f.write(raw_request) }}
 
     sqlmap_path = File.join(module_dir, '..', 'sqlmap.py')
 
     if File.exist?(sqlmap_path)
-      sqlmap_cmd = "python3 #{sqlmap_path} -r #{request_file} --batch --level=1"
-      print_status("Executing: #{sqlmap_cmd}")
+      sqlmap_cmd = "python3 {{sqlmap_path}} -r {{request_file}} --batch --level=1"
+      print_status("Executing: {{sqlmap_cmd}}")
       system(sqlmap_cmd)
     else
       print_error("sqlmap.py not found in parent directory")
@@ -63,19 +53,22 @@ end
 '''
 
 def generate_module(output_path, module_name, author, description, raw_request):
+    # Escape Ruby curly braces for safe .format usage
+    escaped_request = raw_request.replace('\\', '\\\\')
     content = MODULE_TEMPLATE.format(
         module_name=module_name,
         author=author,
-        description=description
+        description=description,
     )
 
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(content)
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"[+] Module saved to {output_path}")
+    except Exception as e:
+        print(f"[!] Failed to write module: {e}")
 
-    print(f"[+] MSF module saved to {output_path}")
-    print(f"[+] exploit.txt will be created automatically by the module when run in MSF.")
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     print("=== MSF .rb Module Generator (sqlmap-nu11secur1ty) ===")
     output_file = input("Enter output .rb filename (e.g., MyModule.rb): ").strip()
     module_name = input("Enter module name (e.g., SQLi-Test): ").strip()
@@ -89,6 +82,6 @@ if __name__ == "__main__":
         if line.strip() == 'END':
             break
         lines.append(line)
-    raw_request = "\n".join(lines)
+    raw_request = '\n'.join(lines)
 
     generate_module(output_file, module_name, author, description, raw_request)
