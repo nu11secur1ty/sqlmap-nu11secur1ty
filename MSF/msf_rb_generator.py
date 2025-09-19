@@ -36,22 +36,20 @@ class MetasploitModule < Msf::Auxiliary
       return
     end
 
-    # Save exploit.txt in a safe writable location
-    exploit_dir = File.join(Dir.home, ".msf_exploits")
-    Dir.mkdir(exploit_dir) unless Dir.exist?(exploit_dir)
-    request_file = File.join(exploit_dir, "exploit.txt")
+    print_status("Saving RAW_REQUEST to exploit.txt...")
 
+    module_dir = File.expand_path(File.dirname(__FILE__))
+    request_file = File.join(module_dir, "exploit.txt")
+    # Ruby block syntax must be kept, escape curly braces for Python
     File.open(request_file, "w") do |f|
       f.write(raw_request)
     end
-    print_status("exploit.txt saved to #{request_file}")
 
-    # Path to sqlmap
-    sqlmap_path = File.join(File.expand_path("..", File.dirname(__FILE__)), "sqlmap.py")
+    sqlmap_path = File.join(module_dir, "..", "sqlmap.py")
 
     if File.exist?(sqlmap_path)
-      sqlmap_cmd = "python3 #{sqlmap_path} -r #{request_file} --batch --level=1"
-      print_status("Executing: #{sqlmap_cmd}")
+      sqlmap_cmd = "python3 \#{sqlmap_path} -r \#{request_file} --batch --level=1"
+      print_status("Executing: \#{sqlmap_cmd}")
       system(sqlmap_cmd)
     else
       print_error("sqlmap.py not found in parent directory")
@@ -61,6 +59,7 @@ end
 '''
 
 def generate_module(output_path, module_name, author, description, raw_request, msf_dir=None):
+    # Format Python placeholders only for module metadata
     content = MODULE_TEMPLATE.format(
         module_name=module_name,
         author=author,
@@ -76,7 +75,7 @@ def generate_module(output_path, module_name, author, description, raw_request, 
         print(f"[!] Failed to write module: {e}")
         return
 
-    # Save exploit.txt
+    # Save exploit.txt in same folder
     exploit_txt = os.path.join(os.path.dirname(output_path), "exploit.txt")
     try:
         with open(exploit_txt, "w", encoding="utf-8") as f:
@@ -92,7 +91,7 @@ def generate_module(output_path, module_name, author, description, raw_request, 
             shutil.copy(exploit_txt, msf_dir)
             print(f"[+] Module and exploit.txt copied to {msf_dir}")
         except PermissionError:
-            print(f"[!] Permission denied. Try running with sudo to copy files to {msf_dir}")
+            print(f"[!] Permission denied. Run with sudo to copy to {msf_dir}")
         except Exception as e:
             print(f"[!] Failed to copy files to MSF directory: {e}")
 
