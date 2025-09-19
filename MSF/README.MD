@@ -156,9 +156,3 @@ sqlmap_cmd = "python3 #{sqlmap_path} -r #{request_file} --batch --level=3 --risk
 
 - Use the module multiple times by generating new .rb files with different Burp requests.
 
-
-
-<<<<<<< HEAD
-
-=======
->>>>>>> 3cd0ef86f526b4474bc4849f03dd97f194642187
