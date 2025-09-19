@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import shutil
 
 MODULE_TEMPLATE = r'''
 class MetasploitModule < Msf::Auxiliary
@@ -63,23 +64,29 @@ end
 
 def generate_module(module_name, author, description, raw_request, msf_path):
     os.makedirs(msf_path, exist_ok=True)
-    output_rb = os.path.join(msf_path, f"{module_name}.rb")
-    exploit_txt = os.path.join(msf_path, "exploit.txt")
 
-    content = MODULE_TEMPLATE.format(
-        module_name=module_name,
-        author=author,
-        description=description
-    )
+    tmp_rb = f"{module_name}.rb"
+    tmp_txt = "exploit.txt"
 
-    with open(output_rb, 'w', encoding='utf-8') as f:
-        f.write(content)
+    # write temporary files first
+    with open(tmp_rb, 'w', encoding='utf-8') as f:
+        f.write(MODULE_TEMPLATE.format(
+            module_name=module_name,
+            author=author,
+            description=description
+        ))
 
-    with open(exploit_txt, 'w', encoding='utf-8') as f:
+    with open(tmp_txt, 'w', encoding='utf-8') as f:
         f.write(raw_request)
 
-    print(f"[+] Module saved: {output_rb}")
-    print(f"[+] Burp request saved: {exploit_txt}")
+    # move files to MSF folder
+    shutil.move(tmp_rb, os.path.join(msf_path, tmp_rb))
+    shutil.move(tmp_txt, os.path.join(msf_path, tmp_txt))
+
+    print(f"[+] Your exploit '{module_name}' has been created and moved to MSF auxiliary folder: {msf_path}")
+    print(f"[+] Module: {tmp_rb}")
+    print(f"[+] Burp request saved as: {tmp_txt}")
+    print("[!] Ready to use in msfconsole!")
 
 if __name__ == '__main__':
     print("=== MSF .rb Module Generator (sqlmap-nu11secur1ty) ===")
