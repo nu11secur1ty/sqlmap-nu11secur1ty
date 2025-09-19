@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
-"""
-MSF .rb Module Generator for sqlmap-nu11secur1ty
-Author: nu11secur1ty
-Description: Generate fully functional Metasploit auxiliary modules from Burp requests
-             and execute sqlmap-nu11secur1ty automatically.
-"""
+import os
+import shutil
 
 MODULE_TEMPLATE = r'''
 class MetasploitModule < Msf::Auxiliary
@@ -47,7 +43,7 @@ class MetasploitModule < Msf::Auxiliary
     request_file = File.join(module_dir, "exploit.txt")
 
     begin
-      File.open(request_file, "w") { |f| f.write(raw_request) }
+      File.open(request_file, "w") {{ |f| f.write(raw_request) }}
     rescue => e
       print_error("Failed to write exploit.txt: #{e}")
       return
@@ -66,35 +62,34 @@ class MetasploitModule < Msf::Auxiliary
 end
 '''
 
-def generate_module(output_path, module_name, author, description, raw_request):
-    """
-    Safely generate an MSF .rb module file with embedded Burp request.
-    Escapes all problematic characters for Ruby multiline strings.
-    """
-    # Escape backslashes and double quotes for Ruby safely
-    safe_request = raw_request.replace('\\', '\\\\').replace('"', '\"')
-    
-    try:
-        content = MODULE_TEMPLATE.format(
-            module_name=module_name,
-            author=author,
-            description=description
-        )
-    except Exception as e:
-        print(f"[!] Template formatting failed: {e}")
-        return
+def generate_module(module_name, author, description, raw_request, msf_path=None):
+    # Detect MSF module path or ask user
+    if not msf_path:
+        msf_path = input("Enter full path to MSF module directory (e.g., /home/kali/.../auxly/MSF/): ").strip()
+    os.makedirs(msf_path, exist_ok=True)
 
-    try:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"[+] Module saved to {output_path}")
-        print(f"[+] The exploit.txt will be created when you run the module in msfconsole.")
-    except Exception as e:
-        print(f"[!] Failed to write module: {e}")
+    output_rb = os.path.join(msf_path, f"{module_name}.rb")
+    exploit_txt = os.path.join(msf_path, "exploit.txt")
+
+    # Generate module content
+    content = MODULE_TEMPLATE.format(
+        module_name=module_name,
+        author=author,
+        description=description
+    )
+
+    # Write .rb module
+    with open(output_rb, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print(f"[+] Module saved to {output_rb}")
+
+    # Write exploit.txt
+    with open(exploit_txt, 'w', encoding='utf-8') as f:
+        f.write(raw_request)
+    print(f"[+] Burp request saved to {exploit_txt}")
 
 if __name__ == '__main__':
     print("=== MSF .rb Module Generator (sqlmap-nu11secur1ty) ===")
-    output_file = input("Enter output .rb filename (e.g., MyModule.rb): ").strip()
     module_name = input("Enter module name (e.g., SQLi-Test): ").strip()
     author = input("Enter author name: ").strip()
     description = input("Enter module description: ").strip()
@@ -108,4 +103,4 @@ if __name__ == '__main__':
         lines.append(line)
     raw_request = '\n'.join(lines)
 
-    generate_module(output_file, module_name, author, description, raw_request)
+    generate_module(module_name, author, description, raw_request)
