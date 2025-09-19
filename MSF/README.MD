@@ -76,10 +76,16 @@ END
 ```
 # Copy your module
 - create folder, e.g., MSF/ inside auxiliary
+
+- Manually copying:
 ```
 sudo cp /path/to/MyModule.rb /usr/share/metasploit-framework/modules/auxiliary/MSF/
 sudo cp /path/to/exploit.txt /usr/share/metasploit-framework/modules/auxiliary/MSF/
 ```
+- Automate:
+
+`Follow` the Generator...
+
 -Ensure proper permissions (Metasploit needs read access):
 ```
 sudo chmod 644 /usr/share/metasploit-framework/modules/auxiliary/MSF/MyModule.rb
