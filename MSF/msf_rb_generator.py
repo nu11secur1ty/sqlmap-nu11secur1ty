@@ -82,13 +82,27 @@ def detect_msf_folder():
             return path
     return None
 
+def clean_msf_folder(msf_path):
+    # Remove existing .rb and .txt files in the target folder
+    for filename in os.listdir(msf_path):
+        if filename.endswith(".rb") or filename.endswith(".txt"):
+            file_path = os.path.join(msf_path, filename)
+            try:
+                os.remove(file_path)
+                print(f"[+] Removed old file: {filename}")
+            except Exception as e:
+                print(f"[!] Failed to remove {filename}: {e}")
+
 def generate_module(module_name, author, description, raw_request, msf_path):
     os.makedirs(msf_path, exist_ok=True)
+
+    # Clean the directory first
+    clean_msf_folder(msf_path)
 
     rb_file = f"{module_name}.rb"
     txt_file = "exploit.txt"
 
-    # write temporary files first
+    # Write temporary files first
     with open(rb_file, 'w', encoding='utf-8') as f:
         f.write(MODULE_TEMPLATE.format(
             module_name=module_name,
@@ -99,7 +113,7 @@ def generate_module(module_name, author, description, raw_request, msf_path):
     with open(txt_file, 'w', encoding='utf-8') as f:
         f.write(raw_request)
 
-    # move files to MSF folder
+    # Move files to MSF folder
     shutil.move(rb_file, os.path.join(msf_path, rb_file))
     shutil.move(txt_file, os.path.join(msf_path, txt_file))
 
