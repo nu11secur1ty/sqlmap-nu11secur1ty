@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""
-MSF .rb Module Generator for sqlmap-nu11secur1ty
-Author: nu11secur1ty
-Description: Generate Metasploit auxiliary modules from Burp requests
-             and execute sqlmap-nu11secur1ty automatically.
-"""
-
 import os
 import shutil
 
@@ -40,7 +33,6 @@ class MetasploitModule < Msf::Auxiliary
 
     module_dir = File.expand_path(File.dirname(__FILE__))
     request_file = File.join(module_dir, "exploit.txt")
-    # Correct Ruby block syntax
     File.open(request_file, "w") do |f|
       f.write(raw_request)
     end
@@ -48,6 +40,7 @@ class MetasploitModule < Msf::Auxiliary
     sqlmap_path = File.join(module_dir, "..", "sqlmap.py")
 
     if File.exist?(sqlmap_path)
+      # Escape braces for Python, Ruby will interpret them
       sqlmap_cmd = "python3 \\#{sqlmap_path} -r \\#{request_file} --batch --level=1"
       print_status("Executing: \\#{sqlmap_cmd}")
       system(sqlmap_cmd)
@@ -59,14 +52,13 @@ end
 '''
 
 def generate_module(output_path, module_name, author, description, raw_request, msf_dir=None):
-    # Escape only Python format placeholders
+    # Escape only Python placeholders
     content = MODULE_TEMPLATE.format(
         module_name=module_name,
         author=author,
         description=description
     )
 
-    # Write .rb module
     try:
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
@@ -75,7 +67,7 @@ def generate_module(output_path, module_name, author, description, raw_request, 
         print(f"[!] Failed to write module: {e}")
         return
 
-    # Write exploit.txt
+    # Save exploit.txt
     exploit_txt = os.path.join(os.path.dirname(output_path), "exploit.txt")
     try:
         with open(exploit_txt, "w", encoding="utf-8") as f:
@@ -84,7 +76,7 @@ def generate_module(output_path, module_name, author, description, raw_request, 
     except Exception as e:
         print(f"[!] Failed to save exploit.txt: {e}")
 
-    # Optionally copy to MSF
+    # Copy to MSF directory if provided
     if msf_dir and os.path.isdir(msf_dir):
         try:
             shutil.copy(output_path, msf_dir)
