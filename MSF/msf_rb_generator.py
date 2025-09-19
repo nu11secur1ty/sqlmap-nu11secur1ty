@@ -3,7 +3,7 @@
 Python generator for Metasploit auxiliary modules with sqlmap-nu11secur1ty.
 Users input a Burp request, and the generator creates:
 - a .rb MSF module
-- exploit.txt for sqlmap
+- exploit.txt will be generated when running the module
 """
 
 import os
@@ -46,7 +46,7 @@ class MetasploitModule < Msf::Auxiliary
     module_dir = File.expand_path(File.dirname(__FILE__))
     request_file = File.join(module_dir, "exploit.txt")
 
-    # Save Burp request safely
+    # Correct Ruby block syntax
     File.open(request_file, "w") { |f| f.write(raw_request) }
 
     sqlmap_path = File.join(module_dir, '..', 'sqlmap.py')
@@ -63,13 +63,10 @@ end
 '''
 
 def generate_module(output_path, module_name, author, description, raw_request):
-    # Escape triple quotes for safety
-    escaped_request = raw_request.replace('"""', '\"\"\"')
     content = MODULE_TEMPLATE.format(
         module_name=module_name,
         author=author,
-        description=description,
-        raw_request=escaped_request
+        description=description
     )
 
     with open(output_path, 'w', encoding='utf-8') as f:
@@ -94,5 +91,4 @@ if __name__ == "__main__":
         lines.append(line)
     raw_request = "\n".join(lines)
 
-    # Save .rb module
     generate_module(output_file, module_name, author, description, raw_request)
