@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
+"""
+MSF .rb Module Generator for sqlmap-nu11secur1ty
+Author: nu11secur1ty
+Description: Generate Metasploit auxiliary modules from Burp requests
+             and execute sqlmap-nu11secur1ty automatically.
+"""
+
 import os
 import shutil
+
+# List of common Metasploit auxiliary folders
+MSF_PATHS = [
+    "/usr/share/metasploit-framework/modules/auxiliary/MSF/",
+    "/usr/share/metasploit-framework/modules/auxiliary/scanner/",
+    "/opt/metasploit-framework/embedded/framework/modules/auxiliary/MSF/"
+]
 
 MODULE_TEMPLATE = r'''
 class MetasploitModule < Msf::Auxiliary
@@ -62,30 +76,36 @@ class MetasploitModule < Msf::Auxiliary
 end
 '''
 
+def detect_msf_folder():
+    for path in MSF_PATHS:
+        if os.path.isdir(path):
+            return path
+    return None
+
 def generate_module(module_name, author, description, raw_request, msf_path):
     os.makedirs(msf_path, exist_ok=True)
 
-    tmp_rb = f"{module_name}.rb"
-    tmp_txt = "exploit.txt"
+    rb_file = f"{module_name}.rb"
+    txt_file = "exploit.txt"
 
     # write temporary files first
-    with open(tmp_rb, 'w', encoding='utf-8') as f:
+    with open(rb_file, 'w', encoding='utf-8') as f:
         f.write(MODULE_TEMPLATE.format(
             module_name=module_name,
             author=author,
             description=description
         ))
 
-    with open(tmp_txt, 'w', encoding='utf-8') as f:
+    with open(txt_file, 'w', encoding='utf-8') as f:
         f.write(raw_request)
 
     # move files to MSF folder
-    shutil.move(tmp_rb, os.path.join(msf_path, tmp_rb))
-    shutil.move(tmp_txt, os.path.join(msf_path, tmp_txt))
+    shutil.move(rb_file, os.path.join(msf_path, rb_file))
+    shutil.move(txt_file, os.path.join(msf_path, txt_file))
 
-    print(f"[+] Your exploit '{module_name}' has been created and moved to MSF auxiliary folder: {msf_path}")
-    print(f"[+] Module: {tmp_rb}")
-    print(f"[+] Burp request saved as: {tmp_txt}")
+    print(f"[+] Your exploit '{module_name}' has been created and moved to MSF folder: {msf_path}")
+    print(f"[+] Module: {rb_file}")
+    print(f"[+] Burp request saved as: {txt_file}")
     print("[!] Ready to use in msfconsole!")
 
 if __name__ == '__main__':
@@ -103,5 +123,11 @@ if __name__ == '__main__':
         lines.append(line)
     raw_request = '\n'.join(lines)
 
-    msf_path = input("Enter full path to MSF module directory (e.g., /usr/share/metasploit-framework/modules/auxiliary/MSF/): ").strip()
-    generate_module(module_name, author, description, raw_request, msf_path)
+    msf_path = detect_msf_folder()
+    if msf_path:
+        print(f"[+] Detected MSF folder: {msf_path}")
+        generate_module(module_name, author, description, raw_request, msf_path)
+    else:
+        print("[!] Could not detect MSF folder automatically.")
+        msf_path = input("Enter full path to MSF module directory manually: ").strip()
+        generate_module(module_name, author, description, raw_request, msf_path)
