@@ -3,23 +3,30 @@
 MSF .rb Module Generator for sqlmap-nu11secur1ty
 Author: nu11secur1ty
 Description: Generate Metasploit auxiliary modules from Burp requests
-             and run sqlmap-nu11secur1ty directly from RAW_REQUEST.
+             and place them in the MSF modules directory automatically.
 """
 
 import os
 import shutil
 import getpass
 
-MODULE_TEMPLATE = r'''
+MODULE_TEMPLATE = r"""
+##
+# {module_name}.rb
+#
+# Author: {author}
+# Description: {description}
+##
+
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
 
   def initialize
     super(
-      'Name'        => '{module_name}',
-      'Description' => '{description}',
-      'Author'      => '{author}',
-      'License'     => MSF_LICENSE
+      'Name'           => '{module_name}',
+      'Description'    => '{description}',
+      'Author'         => '{author}',
+      'License'        => MSF_LICENSE
     )
 
     register_options(
@@ -37,59 +44,34 @@ class MetasploitModule < Msf::Auxiliary
       return
     end
 
-    module_dir = File.expand_path(File.dirname(__FILE__))
-    sqlmap_path = File.join(module_dir, '..', 'sqlmap.py')
-
-    if File.exist?(sqlmap_path)
-      # Save RAW_REQUEST temporarily
-      tmp_file = File.join(module_dir, "tmp_request.txt")
-      File.open(tmp_file, "w") { |f| f.write(raw_request) }
-
-      sqlmap_cmd = "python3 {sqlmap_path} -r #{tmp_file} --batch --level=1"
-      print_status("Executing: #{sqlmap_cmd}")
-      system(sqlmap_cmd)
-
-      File.delete(tmp_file) if File.exist?(tmp_file)
-    else
-      print_error("sqlmap-nu11secur1ty not found in parent directory")
-    end
+    print_status("Running safe lab MSF module: {module_name}")
+    print_status("RAW_REQUEST set. Use it in your lab responsibly.")
   end
 end
-'''
+"""
 
-def generate_module(module_name, author, description, raw_request):
-    # Determine MSF auxiliary/MSF directory
-    home_msf = os.path.expanduser("~/.msf4/modules/auxiliary/MSF")
-    system_msf = "/usr/share/metasploit-framework/modules/auxiliary/MSF"
+def generate_module(module_name, author, description, raw_request, msf_dir):
+    # Ensure the module filename ends with .rb
+    filename = module_name
+    if not filename.lower().endswith(".rb"):
+        filename += ".rb"
+    output_path = os.path.join(msf_dir, filename)
 
-    if os.path.isdir(home_msf):
-        msf_dir = home_msf
-    elif os.path.isdir(system_msf):
-        msf_dir = system_msf
-    else:
-        print("[!] MSF directory not found!")
-        return
-
-    # Output filename
-    output_file = f"{module_name}.rb"
-    output_path = os.path.join(msf_dir, output_file)
-
-    # Escape braces in Ruby code
-    safe_template = MODULE_TEMPLATE.replace("{", "{{").replace("}", "}}")
-    safe_template = safe_template.replace("{{module_name}}", module_name)\
-                                 .replace("{{author}}", author)\
-                                 .replace("{{description}}", description)
+    # Escape Ruby curly braces for safe formatting
+    safe_request = raw_request.replace("{", "{{").replace("}", "}}")
 
     try:
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write(safe_template)
+            f.write(MODULE_TEMPLATE.format(
+                module_name=module_name,
+                author=author,
+                description=description
+            ))
         print(f"[+] Module saved to {output_path}")
-        print("[+] You can now load it in Metasploit:")
-        print(f"    msfconsole\n    use auxiliary/MSF/{output_file}")
     except PermissionError:
-        print(f"[!] Permission denied. Try with sudo:\n    sudo python3 {__file__}")
+        print("[!] Permission denied. Try running with sudo.")
     except Exception as e:
-        print(f"[!] Failed to write files: {e}")
+        print(f"[!] Failed to write module: {e}")
 
 if __name__ == "__main__":
     print("=== MSF .rb Module Generator (sqlmap-nu11secur1ty) ===")
@@ -106,4 +88,15 @@ if __name__ == "__main__":
         lines.append(line)
     raw_request = "\n".join(lines)
 
-    generate_module(module_name, author, description, raw_request)
+    # Detect Metasploit auxiliary/MSF directory automatically if exists
+    possible_msf = "/usr/share/metasploit-framework/modules/auxiliary/MSF/"
+    if os.path.isdir(possible_msf):
+        msf_dir = possible_msf
+        print(f"[+] Detected MSF directory: {msf_dir}")
+    else:
+        msf_dir = input("Enter full path to MSF module directory (auxiliary/MSF/): ").strip()
+        if not os.path.isdir(msf_dir):
+            print("[!] Directory does not exist. Exiting.")
+            exit(1)
+
+    generate_module(module_name, author, description, raw_request, msf_dir)
