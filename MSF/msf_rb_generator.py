@@ -1,8 +1,22 @@
 #!/usr/bin/env python3
+"""
+MSF .rb Module Generator for sqlmap-nu11secur1ty
+Author: nu11secur1ty
+Description: Generate Metasploit auxiliary modules from Burp requests
+             and save exploit.txt automatically.
+"""
+
 import os
 import shutil
 
 MODULE_TEMPLATE = r'''
+##
+# {module_name}.rb
+#
+# Author: {author}
+# Description: {description}
+##
+
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
 
@@ -33,63 +47,60 @@ class MetasploitModule < Msf::Auxiliary
 
     module_dir = File.expand_path(File.dirname(__FILE__))
     request_file = File.join(module_dir, "exploit.txt")
-    File.open(request_file, "w") do |f|
-      f.write(raw_request)
-    end
+    File.open(request_file, "w") {{ |f| f.write(raw_request) }}
 
-    sqlmap_path = File.join(module_dir, "..", "sqlmap.py")
-
-    if File.exist?(sqlmap_path)
-      # Escape braces for Python, Ruby will interpret them
-      sqlmap_cmd = "python3 \\#{sqlmap_path} -r \\#{request_file} --batch --level=1"
-      print_status("Executing: \\#{sqlmap_cmd}")
-      system(sqlmap_cmd)
-    else
-      print_error("sqlmap.py not found in parent directory")
-    end
+    print_status("Module ready. You can now use exploit.txt for sqlmap or other tests.")
   end
 end
 '''
 
 def generate_module(output_path, module_name, author, description, raw_request, msf_dir=None):
-    # Escape only Python placeholders
     content = MODULE_TEMPLATE.format(
         module_name=module_name,
         author=author,
         description=description
     )
 
+    # Write .rb file
     try:
-        with open(output_path, "w", encoding="utf-8") as f:
+        with open(output_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        print(f"[+] Module saved to {output_path}")
     except Exception as e:
-        print(f"[!] Failed to write module: {e}")
+        print(f"[!] Failed to write .rb file: {e}")
         return
 
-    # Save exploit.txt
-    exploit_txt = os.path.join(os.path.dirname(output_path), "exploit.txt")
+    # Write exploit.txt
+    exploit_path = os.path.join(os.path.dirname(output_path), "exploit.txt")
     try:
-        with open(exploit_txt, "w", encoding="utf-8") as f:
+        with open(exploit_path, 'w', encoding='utf-8') as f:
             f.write(raw_request)
-        print(f"[+] exploit.txt saved to {exploit_txt}")
     except Exception as e:
-        print(f"[!] Failed to save exploit.txt: {e}")
+        print(f"[!] Failed to write exploit.txt: {e}")
+        return
 
-    # Copy to MSF directory if provided
-    if msf_dir and os.path.isdir(msf_dir):
+    print(f"[+] Module saved to {output_path}")
+    print(f"[+] Exploit saved to {exploit_path}")
+
+    # Optionally copy to MSF module directory
+    if msf_dir:
+        if not os.path.isdir(msf_dir):
+            print(f"[!] MSF module directory not found: {msf_dir}")
+            return
         try:
-            shutil.copy(output_path, msf_dir)
-            shutil.copy(exploit_txt, msf_dir)
-            print(f"[+] Module and exploit.txt copied to {msf_dir}")
+            shutil.copy2(output_path, msf_dir)
+            shutil.copy2(exploit_path, msf_dir)
+            print(f"[+] Files copied to {msf_dir}")
         except PermissionError:
-            print(f"[!] Permission denied. Use sudo to copy to {msf_dir}")
+            print("[!] Permission denied. Try running with sudo to copy to MSF directory.")
         except Exception as e:
-            print(f"[!] Failed to copy files to MSF directory: {e}")
+            print(f"[!] Failed to copy files: {e}")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     print("=== MSF .rb Module Generator (sqlmap-nu11secur1ty) ===")
     output_file = input("Enter output .rb filename (e.g., MyModule.rb): ").strip()
+    if not output_file.endswith('.rb'):
+        output_file += '.rb'
+
     module_name = input("Enter module name (e.g., SQLi-Test): ").strip()
     author = input("Enter author name: ").strip()
     description = input("Enter module description: ").strip()
@@ -98,13 +109,13 @@ if __name__ == "__main__":
     lines = []
     while True:
         line = input()
-        if line.strip() == "END":
+        if line.strip() == 'END':
             break
         lines.append(line)
-    raw_request = "\n".join(lines)
+    raw_request = '\n'.join(lines)
 
     msf_dir = input("Enter full path to MSF module directory (optional, leave empty to skip): ").strip()
-    if msf_dir == "":
+    if msf_dir == '':
         msf_dir = None
 
     generate_module(output_file, module_name, author, description, raw_request, msf_dir)
