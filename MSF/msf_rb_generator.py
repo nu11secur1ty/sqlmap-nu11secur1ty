@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
 """
 MSF .rb Module Generator for sqlmap-nu11secur1ty
+Generates a .rb module and saves exploit.txt automatically
 Author: nu11secur1ty
-Description: Generate Metasploit auxiliary modules from Burp requests
-             with automatic extraction of RHOSTS, TARGETURI, and PORT.
 """
 
 import os
+from string import Template
 import shutil
-from urllib.parse import urlparse
 
-MODULE_TEMPLATE = r"""
+# Ruby template with $ placeholders instead of {}
+MODULE_TEMPLATE = Template(r'''
 class MetasploitModule < Msf::Auxiliary
   include Msf::Exploit::Remote::HttpClient
 
   def initialize
     super(
-      'Name'           => '{module_name}',
-      'Description'    => '{description}',
-      'Author'         => '{author}',
+      'Name'           => '$module_name',
+      'Description'    => '$description',
+      'Author'         => '$author',
       'License'        => MSF_LICENSE
     )
 
     register_options(
       [
         OptString.new('RAW_REQUEST', [true, 'Raw HTTP request (from Burp)', '']),
-        Opt::RHOSTS.new('RHOSTS', [true, 'Target host', '{rhosts}']),
-        OptString.new('TARGETURI', [true, 'Target URI', '{targeturi}']),
-        Opt::RPORT.new('RPORT', [true, 'Target port', {rport}])
+        OptString.new('TARGETURI', [true, 'Target URI extracted from request', '$targeturi']),
+        OptString.new('RHOSTS', [true, 'Target host extracted from request', '$rhost'])
       ]
     )
   end
 
   def run
+    print_status("Running module $module_name")
     raw_request = datastore['RAW_REQUEST']
 
     if raw_request.empty?
@@ -40,82 +40,66 @@ class MetasploitModule < Msf::Auxiliary
       return
     end
 
+    # Save the request to exploit.txt
     module_dir = File.expand_path(File.dirname(__FILE__))
     request_file = File.join(module_dir, "exploit.txt")
-    File.open(request_file, "w") {{ |f| f.write(raw_request) }}
-    print_status("RAW_REQUEST saved to exploit.txt")
+    File.open(request_file, "w") { |f| f.write(raw_request) }
 
-    sqlmap_path = File.join(module_dir, '..', 'sqlmap-nu11secur1ty', 'sqlmap.py')
-
-    if File.exist?(sqlmap_path)
-      sqlmap_cmd = "python3 \#{sqlmap_path} -r \#{request_file} --batch --level=1"
-      print_status("Executing sqlmap-nu11secur1ty: \#{sqlmap_cmd}")
-      system(sqlmap_cmd)
-    else
-      print_error("sqlmap-nu11secur1ty not found in module directory")
-    end
+    print_status("exploit.txt saved in module directory")
   end
 end
-"""
+''')
 
-def parse_request(raw_request):
-    """Extract host, port, and URI from the Burp request."""
-    host, port, uri = "127.0.0.1", 80, "/"
+def generate_module(output_path, module_name, author, description, raw_request, msf_dir):
+    # Extract RHOST and TARGETURI from request
+    rhost = ""
+    targeturi = ""
     for line in raw_request.splitlines():
-        if line.lower().startswith("host:"):
-            host_port = line.split(":", 1)[1].strip()
-            if ":" in host_port:
-                host, port = host_port.split(":")
-                port = int(port)
-            else:
-                host = host_port
-                port = 443 if "https" in raw_request.lower() else 80
-        elif line.upper().startswith(("GET", "POST", "HEAD", "PUT", "DELETE")):
-            parts = line.split()
-            if len(parts) >= 2:
-                uri = parts[1]
-    return host, port, uri
+        if line.startswith("Host:"):
+            rhost = line.split(":",1)[1].strip()
+        elif line.startswith("POST") or line.startswith("GET"):
+            targeturi = line.split(" ",2)[1].strip()
 
-def generate_module(output_path, module_name, author, description, raw_request, msf_dir=None):
-    rhost, rport, targeturi = parse_request(raw_request)
+    # Ensure MSF directory exists
+    if not os.path.isdir(msf_dir):
+        print(f"[!] MSF directory {msf_dir} does not exist")
+        return
 
-    content = MODULE_TEMPLATE.format(
+    # Write exploit.txt
+    exploit_path = os.path.join(msf_dir, "exploit.txt")
+    try:
+        with open(exploit_path, 'w', encoding='utf-8') as f:
+            f.write(raw_request)
+        print(f"[+] exploit.txt saved to {exploit_path}")
+    except Exception as e:
+        print(f"[!] Failed to write exploit.txt: {e}")
+        return
+
+    # Fill template
+    content = MODULE_TEMPLATE.substitute(
         module_name=module_name,
-        description=description,
         author=author,
-        rhosts=rhost,
-        rport=rport,
+        description=description,
+        rhost=rhost,
         targeturi=targeturi
     )
 
+    # Write .rb module
+    rb_path = os.path.join(msf_dir, output_path)
     try:
-        # Save .rb module
-        with open(output_path, "w", encoding="utf-8") as f:
+        with open(rb_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        print(f"[+] Module saved to {output_path}")
-
-        # Save exploit.txt
-        exploit_path = os.path.join(os.path.dirname(output_path), "exploit.txt")
-        with open(exploit_path, "w", encoding="utf-8") as f:
-            f.write(raw_request)
-        print(f"[+] Exploit saved to {exploit_path}")
-
-        # Auto copy to MSF dir if exists
-        if msf_dir and os.path.isdir(msf_dir):
-            shutil.copy(output_path, msf_dir)
-            shutil.copy(exploit_path, msf_dir)
-            print(f"[+] Files copied to MSF directory: {msf_dir}")
-
+        print(f"[+] Module saved to {rb_path}")
     except Exception as e:
-        print(f"[!] Failed to write files: {e}")
+        print(f"[!] Failed to write module: {e}")
 
 if __name__ == "__main__":
     print("=== MSF .rb Module Generator (sqlmap-nu11secur1ty) ===")
-    output_file = input("Enter output .rb filename (e.g., MyModule.rb): ").strip()
-    module_name = input("Enter module name (e.g., SQLi-Test): ").strip()
+    output_file = input("Enter output .rb filename (e.g., sacco.rb): ").strip()
+    module_name = input("Enter module name: ").strip()
     author = input("Enter author name: ").strip()
     description = input("Enter module description: ").strip()
-    msf_dir = input("Enter full path to MSF module directory (or leave blank to skip): ").strip() or None
+    msf_dir = input("Enter full path to MSF module directory (e.g., /usr/share/metasploit-framework/modules/auxiliary/MSF/): ").strip()
 
     print("Paste your Burp request (POST/GET). End with a line containing only END:")
     lines = []
