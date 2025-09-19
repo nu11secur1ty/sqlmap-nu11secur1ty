@@ -20,13 +20,14 @@ The module will:
 
 ## Directory Setup
 
+```
 sqlmap-nu11secur1ty/
 ├── sqlmap.py # SQLi testing engine
 ├── MSF/
 │ ├── msf_rb_generator.py # Python generator
 │ ├── YourModule.rb # Generated Metasploit module
 │ └── exploit.txt # Saved HTTP request
-
+```
 
 
 > Ensure `sqlmap.py` is in the **parent folder** of `MSF/`.
