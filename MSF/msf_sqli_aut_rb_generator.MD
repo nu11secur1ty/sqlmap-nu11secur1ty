@@ -35,10 +35,22 @@ optionally copied to MSF module dir (if you supplied one and had permissions)
 ```yaml
 reload_all
 use auxiliary/MSF/sacco_auto_sqlmap    # or use auxiliary/<path>/<name> depending where you placed it
-set RAW_REQUEST `cat /home/kali/.msf_exploits/exploit_YYYYMMDDHHMMSS.txt`   # or set RAW_REQUEST by pasting
 set SQLMAP_PATH /home/kali/sqlmap-nu11secur1ty/sqlmap.py
-set RHOSTS 192.168.100.46
+set RHOSTS 0.0.0.0 # your RHOSTS
 run
+```
+
+# Exploit example in my VM Kali Linux
+```yaml
+msf > use auxiliary/MSF/sacco_auto_sqlmap
+msf auxiliary(MSF/sacco_auto_sqlmap) > set SQLMAP_PATH /home/kali/sqlmap-nu11secur1ty/sqlmap.py
+SQLMAP_PATH => /home/kali/sqlmap-nu11secur1ty/sqlmap.py
+msf auxiliary(MSF/sacco_auto_sqlmap) > set RHOSTS 10.10.0.7
+RHOSTS => 10.10.0.7
+msf auxiliary(MSF/sacco_auto_sqlmap) > run
+```
+
+
 ```
 
 In msfconsole:
