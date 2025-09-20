@@ -31,7 +31,7 @@ exploit.txt in current dir (your raw Burp request)
 optionally copied to MSF module dir (if you supplied one and had permissions)
 
 
-# Setup for example
+# Setup for example in `msfconsole`
 ```yaml
 reload_all
 use auxiliary/MSF/sacco_auto_sqlmap    # or use auxiliary/<path>/<name> depending where you placed it
@@ -49,8 +49,3 @@ msf auxiliary(MSF/sacco_auto_sqlmap) > set RHOSTS 10.10.0.7
 RHOSTS => 10.10.0.7
 msf auxiliary(MSF/sacco_auto_sqlmap) > run
 ```
-
-
-```
-
-In msfconsole:
