@@ -31,7 +31,7 @@ exploit.txt in current dir (your raw Burp request)
 optionally copied to MSF module dir (if you supplied one and had permissions)
 
 
-# Out
+# Setup for example
 ```yaml
 reload_all
 use auxiliary/MSF/sacco_auto_sqlmap    # or use auxiliary/<path>/<name> depending where you placed it
