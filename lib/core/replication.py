@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -106,10 +106,12 @@ class Replication(object):
             """
             This function is used for selecting row(s) from current table.
             """
-            _ = 'SELECT * FROM %s' % self.name
+            query = 'SELECT * FROM "%s"' % self.name
             if condition:
-                _ += 'WHERE %s' % condition
-            return self.execute(_)
+                query += ' WHERE %s' % condition
+
+            self.execute(query)
+            return self.parent.cursor.fetchall()
 
     def createTable(self, tblname, columns=None, typeless=False):
         """

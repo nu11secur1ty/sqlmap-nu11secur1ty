@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -185,9 +185,9 @@ class Entries(object):
                     entries = []
                     query = None
 
-                    if Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.DB2, DBMS.DERBY, DBMS.ALTIBASE, DBMS.MIMERSQL):
+                    if Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.DB2, DBMS.DERBY, DBMS.ALTIBASE, DBMS.MIMERSQL, DBMS.SNOWFLAKE):
                         query = rootQuery.inband.query % (colString, tbl.upper() if not conf.db else ("%s.%s" % (conf.db.upper(), tbl.upper())))
-                    elif Backend.getIdentifiedDbms() in (DBMS.SQLITE, DBMS.ACCESS, DBMS.FIREBIRD, DBMS.MAXDB, DBMS.MCKOI, DBMS.EXTREMEDB, DBMS.RAIMA):
+                    elif Backend.getIdentifiedDbms() in (DBMS.SQLITE, DBMS.ACCESS, DBMS.FIREBIRD, DBMS.MAXDB, DBMS.MCKOI, DBMS.EXTREMEDB, DBMS.RAIMA, DBMS.SNOWFLAKE):
                         query = rootQuery.inband.query % (colString, tbl)
                     elif Backend.getIdentifiedDbms() in (DBMS.SYBASE, DBMS.MSSQL):
                         # Partial inband and error
@@ -241,7 +241,7 @@ class Entries(object):
                                     entries = BigArray(_zip(*[entries[colName] for colName in colList]))
                         else:
                             query = rootQuery.inband.query % (colString, conf.db, tbl)
-                    elif Backend.getIdentifiedDbms() in (DBMS.MYSQL, DBMS.PGSQL, DBMS.HSQLDB, DBMS.H2, DBMS.VERTICA, DBMS.PRESTO, DBMS.CRATEDB, DBMS.CACHE, DBMS.VIRTUOSO, DBMS.CLICKHOUSE):
+                    elif Backend.getIdentifiedDbms() in (DBMS.MYSQL, DBMS.PGSQL, DBMS.HSQLDB, DBMS.H2, DBMS.VERTICA, DBMS.PRESTO, DBMS.CRATEDB, DBMS.CACHE, DBMS.VIRTUOSO, DBMS.CLICKHOUSE, DBMS.SPANNER):
                         query = rootQuery.inband.query % (colString, conf.db, tbl, prioritySortColumns(colList)[0])
                     else:
                         query = rootQuery.inband.query % (colString, conf.db, tbl)
@@ -294,7 +294,7 @@ class Entries(object):
                     infoMsg += "in database '%s'" % unsafeSQLIdentificatorNaming(conf.db)
                     logger.info(infoMsg)
 
-                    if Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.DB2, DBMS.DERBY, DBMS.ALTIBASE, DBMS.MIMERSQL):
+                    if Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.DB2, DBMS.DERBY, DBMS.ALTIBASE, DBMS.MIMERSQL, DBMS.SNOWFLAKE):
                         query = rootQuery.blind.count % (tbl.upper() if not conf.db else ("%s.%s" % (conf.db.upper(), tbl.upper())))
                     elif Backend.getIdentifiedDbms() in (DBMS.SQLITE, DBMS.MAXDB, DBMS.ACCESS, DBMS.FIREBIRD, DBMS.MCKOI, DBMS.EXTREMEDB, DBMS.RAIMA):
                         query = rootQuery.blind.count % tbl
@@ -410,7 +410,7 @@ class Entries(object):
                                     if column not in entries:
                                         entries[column] = BigArray()
 
-                                    if Backend.getIdentifiedDbms() in (DBMS.MYSQL, DBMS.PGSQL, DBMS.HSQLDB, DBMS.H2, DBMS.VERTICA, DBMS.PRESTO, DBMS.CRATEDB, DBMS.CACHE, DBMS.CLICKHOUSE):
+                                    if Backend.getIdentifiedDbms() in (DBMS.MYSQL, DBMS.PGSQL, DBMS.HSQLDB, DBMS.H2, DBMS.VERTICA, DBMS.PRESTO, DBMS.CRATEDB, DBMS.CACHE, DBMS.CLICKHOUSE, DBMS.SNOWFLAKE, DBMS.SPANNER):
                                         query = rootQuery.blind.query % (agent.preprocessField(tbl, column), conf.db, conf.tbl, sorted(colList, key=len)[0], index)
                                     elif Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.DB2, DBMS.DERBY, DBMS.ALTIBASE,):
                                         query = rootQuery.blind.query % (agent.preprocessField(tbl, column), tbl.upper() if not conf.db else ("%s.%s" % (conf.db.upper(), tbl.upper())), index)

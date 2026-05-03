@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -437,7 +437,7 @@ def start():
                 continue
 
             if conf.rParam and kb.originalPage:
-                kb.randomPool = dict([_ for _ in kb.randomPool.items() if isinstance(_[1], list)])
+                kb.randomPool = dict(_ for _ in kb.randomPool.items() if isinstance(_[1], list))
 
                 for match in re.finditer(r"(?si)<select[^>]+\bname\s*=\s*[\"']([^\"']+)(.+?)</select>", kb.originalPage):
                     name, _ = match.groups()

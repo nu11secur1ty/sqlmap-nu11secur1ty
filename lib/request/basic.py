@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -10,7 +10,6 @@ import gzip
 import io
 import logging
 import re
-import struct
 import zlib
 
 from lib.core.common import Backend
@@ -44,7 +43,8 @@ from lib.core.settings import BLOCKED_IP_REGEX
 from lib.core.settings import DEFAULT_COOKIE_DELIMITER
 from lib.core.settings import EVENTVALIDATION_REGEX
 from lib.core.settings import HEURISTIC_PAGE_SIZE_THRESHOLD
-from lib.core.settings import IDENTYWAF_PARSE_LIMIT
+from lib.core.settings import IDENTYWAF_PARSE_COUNT_LIMIT
+from lib.core.settings import IDENTYWAF_PARSE_PAGE_LIMIT
 from lib.core.settings import MAX_CONNECTION_TOTAL_SIZE
 from lib.core.settings import META_CHARSET_REGEX
 from lib.core.settings import PARSE_HEADERS_LIMIT
@@ -249,6 +249,7 @@ def checkCharEncoding(encoding, warn=True):
 
     return encoding
 
+@lockedmethod
 def getHeuristicCharEncoding(page):
     """
     Returns page encoding charset detected by usage of heuristics
@@ -259,9 +260,12 @@ def getHeuristicCharEncoding(page):
     'ascii'
     """
 
-    key = hash(page)
-    retVal = kb.cache.encoding[key] if key in kb.cache.encoding else detect(page[:HEURISTIC_PAGE_SIZE_THRESHOLD])["encoding"]
-    kb.cache.encoding[key] = retVal
+    key = (len(page), hash(page))
+
+    retVal = kb.cache.encoding.get(key)
+    if retVal is None:
+        retVal = detect(page[:HEURISTIC_PAGE_SIZE_THRESHOLD])["encoding"]
+        kb.cache.encoding[key] = retVal
 
     if retVal and retVal.lower().replace('-', "") == UNICODE_ENCODING.lower().replace('-', ""):
         infoMsg = "heuristics detected web page charset '%s'" % retVal
@@ -282,8 +286,8 @@ def decodePage(page, contentEncoding, contentType, percentDecode=True):
     if not page or (conf.nullConnection and len(page) < 2):
         return getUnicode(page)
 
-    contentEncoding = contentEncoding.lower() if hasattr(contentEncoding, "lower") else ""
-    contentType = contentType.lower() if hasattr(contentType, "lower") else ""
+    contentEncoding = getText(contentEncoding).lower() if contentEncoding else ""
+    contentType = getText(contentType).lower() if contentType else ""
 
     if contentEncoding in ("gzip", "x-gzip", "deflate"):
         if not kb.pageCompress:
@@ -291,14 +295,16 @@ def decodePage(page, contentEncoding, contentType, percentDecode=True):
 
         try:
             if contentEncoding == "deflate":
-                data = io.BytesIO(zlib.decompress(page, -15))  # Reference: http://stackoverflow.com/questions/1089662/python-inflate-and-deflate-implementations
+                obj = zlib.decompressobj(-15)
+                page = obj.decompress(page, MAX_CONNECTION_TOTAL_SIZE + 1)
+                page += obj.flush()
+                if len(page) > MAX_CONNECTION_TOTAL_SIZE:
+                    raise Exception("size too large")
             else:
                 data = gzip.GzipFile("", "rb", 9, io.BytesIO(page))
-                size = struct.unpack("<l", page[-4:])[0]  # Reference: http://pydoc.org/get.cgi/usr/local/lib/python2.5/gzip.py
-                if size > MAX_CONNECTION_TOTAL_SIZE:
+                page = data.read(MAX_CONNECTION_TOTAL_SIZE + 1)
+                if len(page) > MAX_CONNECTION_TOTAL_SIZE:
                     raise Exception("size too large")
-
-            page = data.read()
         except Exception as ex:
             if b"<html" not in page:  # in some cases, invalid "Content-Encoding" appears for plain HTML (should be ignored)
                 errMsg = "detected invalid data for declared content "
@@ -390,8 +396,8 @@ def processResponse(page, responseHeaders, code=None, status=None):
         if msg:
             logger.warning("parsed DBMS error message: '%s'" % msg.rstrip('.'))
 
-    if not conf.skipWaf and kb.processResponseCounter < IDENTYWAF_PARSE_LIMIT:
-        rawResponse = "%s %s %s\n%s\n%s" % (_http_client.HTTPConnection._http_vsn_str, code or "", status or "", "".join(getUnicode(responseHeaders.headers if responseHeaders else [])), page[:HEURISTIC_PAGE_SIZE_THRESHOLD])
+    if not conf.skipWaf and kb.processResponseCounter < IDENTYWAF_PARSE_COUNT_LIMIT:
+        rawResponse = "%s %s %s\n%s\n%s" % (_http_client.HTTPConnection._http_vsn_str, code or "", status or "", "".join(getUnicode(responseHeaders.headers if responseHeaders else [])), page[:IDENTYWAF_PARSE_PAGE_LIMIT] if not kb.checkWafMode else page[:HEURISTIC_PAGE_SIZE_THRESHOLD])
 
         with kb.locks.identYwaf:
             identYwaf.non_blind.clear()

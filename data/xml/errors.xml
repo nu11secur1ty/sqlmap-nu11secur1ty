@@ -9,6 +9,7 @@
         <error regexp="check the manual that (corresponds to|fits) your MySQL server version"/>
         <error regexp="check the manual that (corresponds to|fits) your MariaDB server version" fork="MariaDB"/>
         <error regexp="check the manual that (corresponds to|fits) your Drizzle server version" fork="Drizzle"/>
+        <error regexp="check the manual that (corresponds to|fits) your TiDB server version" fork="TiDB"/>
         <error regexp="Unknown column '[^ ]+' in 'field list'"/>
         <error regexp="MySqlClient\."/>
         <error regexp="com\.mysql\.jdbc"/>
@@ -236,5 +237,16 @@
         <error regexp="SQ200: No table "/>
         <error regexp="Virtuoso S0002 Error"/>
         <error regexp="\[(Virtuoso Driver|Virtuoso iODBC Driver)\]\[Virtuoso Server\]"/>
+    </dbms>
+
+    <dbms value="Snowflake">
+        <error regexp="001003 \(42000\):"/>
+        <error regexp="100038 \(22018\):"/>
+        <error regexp="000904 \(42000\):"/>
+        <error regexp="SQL compilation error: (syntax )?error line \d+ at position \d+"/>
+    </dbms>
+
+    <dbms value="Spanner">
+        <error regexp="type.googleapis.com/zetasql.ErrorMessageModeForPayload"/>
     </dbms>
 </root>

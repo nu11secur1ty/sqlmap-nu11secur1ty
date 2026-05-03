@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -33,6 +33,7 @@ from lib.core.threads import getCurrentThreadData
 from lib.request.basic import decodePage
 from lib.request.basic import parseResponse
 from thirdparty import six
+from thirdparty.six.moves import http_client as _http_client
 from thirdparty.six.moves import urllib as _urllib
 
 class SmartRedirectHandler(_urllib.request.HTTPRedirectHandler):
@@ -67,7 +68,12 @@ class SmartRedirectHandler(_urllib.request.HTTPRedirectHandler):
                 self.redirect_request = self._redirect_request
 
     def _redirect_request(self, req, fp, code, msg, headers, newurl):
-        return _urllib.request.Request(newurl.replace(' ', '%20'), data=req.data, headers=req.headers, origin_req_host=req.get_origin_req_host() if hasattr(req, "get_origin_req_host") else req.origin_req_host)
+        retVal = _urllib.request.Request(newurl.replace(' ', '%20'), data=req.data, headers=req.headers, origin_req_host=req.get_origin_req_host() if hasattr(req, "get_origin_req_host") else req.origin_req_host)
+
+        if hasattr(req, "redirect_dict"):
+            retVal.redirect_dict = req.redirect_dict
+
+        return retVal
 
     def http_error_302(self, req, fp, code, msg, headers):
         start = time.time()
@@ -76,16 +82,13 @@ class SmartRedirectHandler(_urllib.request.HTTPRedirectHandler):
         redurl = self._get_header_redirect(headers) if not conf.ignoreRedirects else None
 
         try:
-            content = fp.read(MAX_CONNECTION_TOTAL_SIZE)
-        except:  # e.g. IncompleteRead
+            content = fp.fp.read(MAX_CONNECTION_TOTAL_SIZE)
+            fp.fp = io.BytesIO(content)
+        except _http_client.IncompleteRead as ex:
+            content = ex.partial
+            fp.fp = io.BytesIO(content)
+        except:
             content = b""
-        finally:
-            if content:
-                try:  # try to write it back to the read buffer so we could reuse it in further steps
-                    fp.fp._rbuf.truncate(0)
-                    fp.fp._rbuf.write(content)
-                except:
-                    pass
 
         content = decodePage(content, headers.get(HTTP_HEADER.CONTENT_ENCODING), headers.get(HTTP_HEADER.CONTENT_TYPE))
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -60,6 +60,8 @@ class DBMS(object):
     FRONTBASE = "FrontBase"
     RAIMA = "Raima Database Manager"
     VIRTUOSO = "Virtuoso"
+    SNOWFLAKE = "Snowflake"
+    SPANNER = "Spanner"
 
 class DBMS_DIRECTORY_NAME(object):
     ACCESS = "access"
@@ -90,6 +92,8 @@ class DBMS_DIRECTORY_NAME(object):
     FRONTBASE = "frontbase"
     RAIMA = "raima"
     VIRTUOSO = "virtuoso"
+    SNOWFLAKE = "snowflake"
+    SPANNER = "spanner"
 
 class FORK(object):
     MARIADB = "MariaDB"
@@ -372,6 +376,7 @@ class WEB_PLATFORM(object):
     ASP = "asp"
     ASPX = "aspx"
     JSP = "jsp"
+    CFM = "cfm"
 
 class CONTENT_TYPE(object):
     TARGET = 0

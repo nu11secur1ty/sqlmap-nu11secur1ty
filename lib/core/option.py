@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
 from __future__ import division
 
 import codecs
+import collections
 import functools
 import glob
 import inspect
@@ -69,6 +70,7 @@ from lib.core.data import mergedOptions
 from lib.core.data import queries
 from lib.core.datatype import AttribDict
 from lib.core.datatype import InjectionDict
+from lib.core.datatype import LRUDict
 from lib.core.datatype import OrderedSet
 from lib.core.defaults import defaults
 from lib.core.dicts import DBMS_DICT
@@ -752,7 +754,7 @@ def _listTamperingFunctions():
         logger.info(infoMsg)
 
         for script in sorted(glob.glob(os.path.join(paths.SQLMAP_TAMPER_PATH, "*.py"))):
-            content = openFile(script, "rb").read()
+            content = openFile(script, 'r').read()
             match = re.search(r'(?s)__priority__.+"""(.+)"""', content)
             if match:
                 comment = match.group(1).strip()
@@ -939,8 +941,8 @@ def _setPreprocessFunctions():
                     handle, filename = tempfile.mkstemp(prefix=MKSTEMP_PREFIX.PREPROCESS, suffix=".py")
                     os.close(handle)
 
-                    openFile(filename, "w+b").write("#!/usr/bin/env\n\ndef preprocess(req):\n    pass\n")
-                    openFile(os.path.join(os.path.dirname(filename), "__init__.py"), "w+b").write("pass")
+                    openFile(filename, "w+").write("#!/usr/bin/env\n\ndef preprocess(req):\n    pass\n")
+                    openFile(os.path.join(os.path.dirname(filename), "__init__.py"), "w+").write("pass")
 
                     errMsg = "function 'preprocess(req)' "
                     errMsg += "in preprocess script '%s' " % script
@@ -1014,8 +1016,8 @@ def _setPostprocessFunctions():
                     handle, filename = tempfile.mkstemp(prefix=MKSTEMP_PREFIX.PREPROCESS, suffix=".py")
                     os.close(handle)
 
-                    openFile(filename, "w+b").write("#!/usr/bin/env\n\ndef postprocess(page, headers=None, code=None):\n    return page, headers, code\n")
-                    openFile(os.path.join(os.path.dirname(filename), "__init__.py"), "w+b").write("pass")
+                    openFile(filename, "w+").write("#!/usr/bin/env\n\ndef postprocess(page, headers=None, code=None):\n    return page, headers, code\n")
+                    openFile(os.path.join(os.path.dirname(filename), "__init__.py"), "w+").write("pass")
 
                     errMsg = "function 'postprocess(page, headers=None, code=None)' "
                     errMsg += "in postprocess script '%s' " % script
@@ -1033,12 +1035,13 @@ def _setDNSCache():
     """
 
     def _getaddrinfo(*args, **kwargs):
-        if args in kb.cache.addrinfo:
-            return kb.cache.addrinfo[args]
+        key = (args, frozenset(kwargs.items()))
 
-        else:
-            kb.cache.addrinfo[args] = socket._getaddrinfo(*args, **kwargs)
-            return kb.cache.addrinfo[args]
+        if key in kb.cache.addrinfo:
+            return kb.cache.addrinfo[key]
+
+        kb.cache.addrinfo[key] = socket._getaddrinfo(*args, **kwargs)
+        return kb.cache.addrinfo[key]
 
     if not hasattr(socket, "_getaddrinfo"):
         socket._getaddrinfo = socket.getaddrinfo
@@ -1054,41 +1057,73 @@ def _setSocketPreConnect():
 
     def _thread():
         while kb.get("threadContinue") and not conf.get("disablePrecon"):
+            done = False
             try:
-                for key in socket._ready:
-                    if len(socket._ready[key]) < SOCKET_PRE_CONNECT_QUEUE_SIZE:
-                        s = socket.create_connection(*key[0], **dict(key[1]))
-                        with kb.locks.socket:
-                            socket._ready[key].append((s, time.time()))
+                with kb.locks.socket:
+                    keys = list(socket._ready.keys())
+
+                for key in keys:
+                    with kb.locks.socket:
+                        q = socket._ready.get(key)
+                        if q is None or len(q) >= SOCKET_PRE_CONNECT_QUEUE_SIZE:
+                            continue
+                        args = key[0]
+                        kwargs = dict(key[1])
+
+                    s = socket._create_connection(*args, **kwargs)
+
+                    with kb.locks.socket:
+                        q = socket._ready.get(key)
+                        if q is not None and len(q) < SOCKET_PRE_CONNECT_QUEUE_SIZE:
+                            q.append((s, time.time()))
+                            s = None
+                            done = True
+
+                    if s is not None:
+                        try:
+                            s.close()
+                        except:
+                            pass
+
             except KeyboardInterrupt:
                 break
             except:
                 pass
             finally:
-                time.sleep(0.01)
+                time.sleep(0.01 if not done else 0.001)
 
     def create_connection(*args, **kwargs):
         retVal = None
+        stale = []
 
         key = (tuple(args), frozenset(kwargs.items()))
         with kb.locks.socket:
             if key not in socket._ready:
-                socket._ready[key] = []
+                socket._ready[key] = collections.deque()
 
-            while len(socket._ready[key]) > 0:
-                candidate, created = socket._ready[key].pop(0)
+            q = socket._ready[key]
+            while len(q) > 0:
+                candidate, created = q.popleft()
                 if (time.time() - created) < PRECONNECT_CANDIDATE_TIMEOUT:
                     retVal = candidate
                     break
                 else:
-                    try:
-                        candidate.shutdown(socket.SHUT_RDWR)
-                        candidate.close()
-                    except socket.error:
-                        pass
+                    stale.append(candidate)
+
+        for candidate in stale:
+            try:
+                candidate.shutdown(socket.SHUT_RDWR)
+                candidate.close()
+            except:
+                pass
 
         if not retVal:
             retVal = socket._create_connection(*args, **kwargs)
+        else:
+            try:
+                retVal.settimeout(kwargs.get("timeout", socket.getdefaulttimeout()))
+            except:
+                pass
 
         return retVal
 
@@ -1592,7 +1627,7 @@ def _createHomeDirectories():
                 os.makedirs(directory)
 
             _ = os.path.join(directory, randomStr())
-            open(_, "w+b").close()
+            open(_, "w+").close()
             os.remove(_)
 
             if conf.get("outputDir") and context == "output":
@@ -1622,7 +1657,7 @@ def _createTemporaryDirectory():
 
             _ = os.path.join(conf.tmpDir, randomStr())
 
-            open(_, "w+b").close()
+            open(_, "w+").close()
             os.remove(_)
 
             tempfile.tempdir = conf.tmpDir
@@ -1957,7 +1992,7 @@ def _cleanupEnvironment():
     Cleanup environment (e.g. from leftovers after --shell).
     """
 
-    if issubclass(_http_client.socket.socket, socks.socksocket):
+    if getattr(_http_client.socket, "socket", None) is not getattr(socks, "_orgsocket", None):
         socks.unwrapmodule(_http_client)
 
     if hasattr(socket, "_ready"):
@@ -2035,9 +2070,9 @@ def _setKnowledgeBaseAttributes(flushAll=True):
 
     kb.cache = AttribDict()
     kb.cache.addrinfo = {}
-    kb.cache.content = {}
+    kb.cache.content = LRUDict(capacity=16)
     kb.cache.comparison = {}
-    kb.cache.encoding = {}
+    kb.cache.encoding = LRUDict(capacity=256)
     kb.cache.alphaBoundaries = None
     kb.cache.hashRegex = None
     kb.cache.intBoundaries = None
@@ -2053,6 +2088,7 @@ def _setKnowledgeBaseAttributes(flushAll=True):
     kb.chars.stop = "%s%s%s" % (KB_CHARS_BOUNDARY_CHAR, randomStr(length=3, alphabet=KB_CHARS_LOW_FREQUENCY_ALPHABET), KB_CHARS_BOUNDARY_CHAR)
     kb.chars.at, kb.chars.space, kb.chars.dollar, kb.chars.hash_ = ("%s%s%s" % (KB_CHARS_BOUNDARY_CHAR, _, KB_CHARS_BOUNDARY_CHAR) for _ in randomStr(length=4, lowercase=True))
 
+    kb.checkWafMode = False
     kb.choices = AttribDict(keycheck=False)
     kb.codePage = None
     kb.commonOutputs = None
@@ -2634,6 +2670,20 @@ def _basicOptionValidation():
     if conf.dumpTable and conf.search:
         errMsg = "switch '--dump' is incompatible with switch '--search'"
         raise SqlmapSyntaxException(errMsg)
+
+    if conf.alert and os.environ.get("SQLMAP_UNSAFE_ALERT") != '1':
+        errMsg = "for security reasons, to prevent execution of potentially malicious "
+        errMsg += "OS commands via configuration files or copy-paste attacks, "
+        errMsg += "the '--alert' option requires the environment variable "
+        errMsg += "'SQLMAP_UNSAFE_ALERT=1' to be explicitly set"
+        raise SqlmapSystemException(errMsg)
+
+    if conf.evalCode and os.environ.get("SQLMAP_UNSAFE_EVAL") != '1':
+        errMsg = "for security reasons, to prevent execution of potentially malicious "
+        errMsg += "Python code via configuration files or copy-paste attacks, "
+        errMsg += "the '--eval' option requires the environment variable "
+        errMsg += "'SQLMAP_UNSAFE_EVAL=1' to be explicitly set"
+        raise SqlmapSystemException(errMsg)
 
     if conf.chunked and not any((conf.data, conf.requestFile, conf.forms)):
         errMsg = "switch '--chunked' requires usage of (POST) options/switches '--data', '-r' or '--forms'"

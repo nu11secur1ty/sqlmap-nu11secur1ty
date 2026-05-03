@@ -15,8 +15,6 @@ This file lists bundled packages and their associated licensing terms.
   Copyright (C) 2013, Jonathan Hartley.
 * The `Fcrypt` library located under `thirdparty/fcrypt/`.
   Copyright (C) 2000, 2001, 2004 Carey Evans.
-* The `PrettyPrint` library located under `thirdparty/prettyprint/`.
-  Copyright (C) 2010, Chris Hall.
 * The `SocksiPy` library located under `thirdparty/socks/`.
   Copyright (C) 2006, Dan-Haim.
 
@@ -271,13 +269,13 @@ be bound by the terms and conditions of this License Agreement.
 # MIT
 
 * The `bottle` web framework library located under `thirdparty/bottle/`.
-  Copyright (C) 2012, Marcel Hellkamp.
+  Copyright (C) 2024, Marcel Hellkamp.
 * The `identYwaf` library located under `thirdparty/identywaf/`.
-  Copyright (C) 2019-2020, Miroslav Stampar.
+  Copyright (C) 2019-2021, Miroslav Stampar.
 * The `ordereddict` library located under `thirdparty/odict/`.
   Copyright (C) 2009, Raymond Hettinger.
 * The `six` Python 2 and 3 compatibility library located under `thirdparty/six/`.
-  Copyright (C) 2010-2018, Benjamin Peterson.
+  Copyright (C) 2010-2024, Benjamin Peterson.
 * The `Termcolor` library located under `thirdparty/termcolor/`.
   Copyright (C) 2008-2011, Volvox Development Team.
 

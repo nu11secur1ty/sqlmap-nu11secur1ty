@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -227,17 +227,18 @@ class Connect(object):
 
     @staticmethod
     def _connReadProxy(conn):
-        retVal = b""
+        parts = []
 
         if not kb.dnsMode and conn:
             headers = conn.info()
             if kb.pageCompress and headers and hasattr(headers, "getheader") and (headers.getheader(HTTP_HEADER.CONTENT_ENCODING, "").lower() in ("gzip", "deflate") or "text" not in headers.getheader(HTTP_HEADER.CONTENT_TYPE, "").lower()):
-                retVal = conn.read(MAX_CONNECTION_TOTAL_SIZE)
-                if len(retVal) == MAX_CONNECTION_TOTAL_SIZE:
+                part = conn.read(MAX_CONNECTION_TOTAL_SIZE)
+                if len(part) == MAX_CONNECTION_TOTAL_SIZE:
                     warnMsg = "large compressed response detected. Disabling compression"
                     singleTimeWarnMessage(warnMsg)
                     kb.pageCompress = False
                     raise SqlmapCompressionException
+                parts.append(part)
             else:
                 while True:
                     if not conn:
@@ -252,18 +253,20 @@ class Connect(object):
                         warnMsg = "large response detected. This could take a while"
                         singleTimeWarnMessage(warnMsg)
                         part = re.sub(getBytes(r"(?si)%s.+?%s" % (kb.chars.stop, kb.chars.start)), getBytes("%s%s%s" % (kb.chars.stop, LARGE_READ_TRIM_MARKER, kb.chars.start)), part)
-                        retVal += part
+                        parts.append(part)
                     else:
-                        retVal += part
+                        parts.append(part)
                         break
 
-                    if len(retVal) > MAX_CONNECTION_TOTAL_SIZE:
+                    if sum(len(_) for _ in parts) > MAX_CONNECTION_TOTAL_SIZE:
                         warnMsg = "too large response detected. Automatically trimming it"
                         singleTimeWarnMessage(warnMsg)
                         break
 
         if conf.yuge:
-            retVal = YUGE_FACTOR * retVal
+            parts = YUGE_FACTOR * parts
+
+        retVal = b"".join(parts)
 
         return retVal
 
@@ -490,7 +493,7 @@ class Connect(object):
                 headers = forgeHeaders(auxHeaders, headers)
 
             if kb.headersFile:
-                content = openFile(kb.headersFile, "rb").read()
+                content = openFile(kb.headersFile, 'r').read()
                 for line in content.split("\n"):
                     line = getText(line.strip())
                     if ':' in line:
@@ -557,6 +560,10 @@ class Connect(object):
                 logger.log(CUSTOM_LOGGING.TRAFFIC_OUT, requestMsg)
             else:
                 post = getBytes(post)
+
+                # Reference: https://github.com/sqlmapproject/sqlmap/issues/6049
+                if cmdLineOptions.method is None and method == HTTPMETHOD.GET and post == b"":
+                    post = None
 
                 if unArrayizeValue(conf.base64Parameter) == HTTPMETHOD.POST:
                     if kb.place != HTTPMETHOD.POST:
@@ -637,7 +644,7 @@ class Connect(object):
                         conn._read_buffer = conn.read()
                         conn._read_offset = 0
 
-                        requestMsg = re.sub(" HTTP/[0-9.]+\r\n", " %s\r\n" % conn.http_version, requestMsg, count=1)
+                        requestMsg = re.sub(r" HTTP/[0-9.]+\r\n", " %s\r\n" % conn.http_version, requestMsg, count=1)
 
                         if not multipart:
                             threadData.lastRequestMsg = requestMsg
@@ -1113,7 +1120,7 @@ class Connect(object):
             logger.log(CUSTOM_LOGGING.PAYLOAD, safecharencode(payload.replace('\\', BOUNDARY_BACKSLASH_MARKER)).replace(BOUNDARY_BACKSLASH_MARKER, '\\'))
 
             if place == PLACE.CUSTOM_POST and kb.postHint:
-                if kb.postHint in (POST_HINT.SOAP, POST_HINT.XML):
+                if kb.postHint in (POST_HINT.SOAP, POST_HINT.XML) and not conf.skipXmlEncode:
                     # payloads in SOAP/XML should have chars > and < replaced
                     # with their HTML encoded counterparts
                     payload = payload.replace("&#", SAFE_HEX_MARKER)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -452,6 +452,14 @@ def _setHashDB():
             except OSError as ex:
                 errMsg = "unable to flush the session file ('%s')" % getSafeExString(ex)
                 raise SqlmapFilePathException(errMsg)
+
+        for suffix in ("-shm", "-wal"):
+            leftover = conf.hashDBFile + suffix
+            if os.path.exists(leftover):
+                try:
+                    os.remove(leftover)
+                except OSError:
+                    pass
 
     conf.hashDB = HashDB(conf.hashDBFile)
 

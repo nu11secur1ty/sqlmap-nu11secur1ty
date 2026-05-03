@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -153,7 +153,7 @@ class Takeover(Abstraction, Metasploit, ICMPsh, Registry):
             if os.path.exists(filename):
                 try:
                     with openFile(filename, "wb") as f:
-                        f.write("1")
+                        f.write(b"1")
                 except IOError as ex:
                     errMsg = "there has been a file opening/writing error "
                     errMsg += "for filename '%s' ('%s')" % (filename, getSafeExString(ex))

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -43,7 +43,7 @@ def vulnTest():
         ("-u <url> --data=\"reflect=1\" --flush-session --wizard --disable-coloring", ("Please choose:", "back-end DBMS: SQLite", "current user is DBA: True", "banner: '3.")),
         ("-u <url> --data=\"code=1\" --code=200 --technique=B --banner --no-cast --flush-session", ("back-end DBMS: SQLite", "banner: '3.", "~COALESCE(CAST(")),
         (u"-c <config> --flush-session --output-dir=\"<tmpdir>\" --smart --roles --statements --hostname --privileges --sql-query=\"SELECT '\u0161u\u0107uraj'\" --technique=U", (u": '\u0161u\u0107uraj'", "on SQLite it is not possible", "as the output directory")),
-        (u"-u <url> --flush-session --sql-query=\"SELECT '\u0161u\u0107uraj'\" --technique=B --no-escape --string=luther --unstable", (u": '\u0161u\u0107uraj'",)),
+        (u"-u <url> --flush-session --sql-query=\"SELECT '\u0161u\u0107uraj'\" --titles --technique=B --no-escape --string=luther --unstable", (u": '\u0161u\u0107uraj'", "~with --string",)),
         ("-m <multiple> --flush-session --technique=B --banner", ("/3] URL:", "back-end DBMS: SQLite", "banner: '3.")),
         ("--dummy", ("all tested parameters do not appear to be injectable", "does not seem to be injectable", "there is not at least one", "~might be injectable")),
         ("-u \"<url>&id2=1\" -p id2 -v 5 --flush-session --level=5 --text-only --test-filter=\"AND boolean-based blind - WHERE or HAVING clause (MySQL comment)\"", ("~1AND",)),
@@ -62,24 +62,26 @@ def vulnTest():
         ("-u <base> --flush-session -H \"Foo: Bar\" -H \"Sna: Fu\" --data=\"<root><param name=\\\"id\\\" value=\\\"1*\\\"/></root>\" --union-char=1 --mobile --answers=\"smartphone=3\" --banner --smart -v 5", ("might be injectable", "Payload: <root><param name=\"id\" value=\"1", "Type: boolean-based blind", "Type: time-based blind", "Type: UNION query", "banner: '3.", "Nexus", "Sna: Fu", "Foo: Bar")),
         ("-u <base> --flush-session --technique=BU --method=PUT --data=\"a=1;id=1;b=2\" --param-del=\";\" --skip-static --har=<tmpfile> --dump -T users --start=1 --stop=2", ("might be injectable", "Parameter: id (PUT)", "Type: boolean-based blind", "Type: UNION query", "2 entries")),
         ("-u <url> --flush-session -H \"id: 1*\" --tables -t <tmpfile>", ("might be injectable", "Parameter: id #1* ((custom) HEADER)", "Type: boolean-based blind", "Type: time-based blind", "Type: UNION query", " users ")),
-        ("-u <url> --flush-session --banner --invalid-logical --technique=B --predict-output --test-filter=\"OR boolean\" --tamper=space2dash", ("banner: '3.", " LIKE ")),
+        ("-u <url> --flush-session --banner --invalid-logical --technique=B --predict-output --titles --test-filter=\"OR boolean\" --tamper=space2dash", ("banner: '3.", " LIKE ")),
         ("-u <url> --flush-session --cookie=\"PHPSESSID=d41d8cd98f00b204e9800998ecf8427e; id=1*; id2=2\" --tables --union-cols=3", ("might be injectable", "Cookie #1* ((custom) HEADER)", "Type: boolean-based blind", "Type: time-based blind", "Type: UNION query", " users ")),
-        ("-u <url> --flush-session --null-connection --technique=B --tamper=between,randomcase --banner --count -T users", ("NULL connection is supported with HEAD method", "banner: '3.", "users | 5")),
+        ("-u <url> --flush-session --null-connection --technique=B --tamper=between,randomcase --banner --count -T users", ("NULL connection is supported with HEAD method", "banner: '3.", "users | 30")),
         ("-u <base> --data=\"aWQ9MQ==\" --flush-session --base64=POST -v 6", ("aWQ9MTtXQUlURk9SIERFTEFZICcwOjA",)),
         ("-u <url> --flush-session --parse-errors --test-filter=\"subquery\" --eval=\"import hashlib; id2=2; id3=hashlib.md5(id.encode()).hexdigest()\" --referer=\"localhost\"", ("might be injectable", ": syntax error", "back-end DBMS: SQLite", "WHERE or HAVING clause (subquery")),
-        ("-u <url> --banner --schema --dump -T users --binary-fields=surname --where \"id>3\"", ("banner: '3.", "INTEGER", "TEXT", "id", "name", "surname", "2 entries", "6E616D6569736E756C6C")),
-        ("-u <url> --technique=U --fresh-queries --force-partial --dump -T users --dump-format=HTML --answers=\"crack=n\" -v 3", ("performed 6 queries", "nameisnull", "~using default dictionary", "dumped to HTML file")),
-        ("-u <url> --flush-session --technique=BU --all", ("5 entries", "Type: boolean-based blind", "Type: UNION query", "luther", "blisset", "fluffy", "179ad45c6ce2cb97cf1029e212046e81", "NULL", "nameisnull", "testpass")),
-        ("-u <url> -z \"tec=B\" --hex --fresh-queries --threads=4 --sql-query=\"SELECT * FROM users\"", ("SELECT * FROM users [5]", "nameisnull")),
+        ("-u <url> --banner --schema --dump -T users --binary-fields=surname --where \"id>3\"", ("banner: '3.", "INTEGER", "TEXT", "id", "name", "surname", "27 entries", "6E616D6569736E756C6C")),
+        ("-u <url> --technique=U --fresh-queries --force-partial --dump -T users --dump-format=HTML --answers=\"crack=n\" -v 3", ("performed 31 queries", "nameisnull", "~using default dictionary", "dumped to HTML file")),
+        ("-u <url> --flush-session --technique=BU --all", ("30 entries", "Type: boolean-based blind", "Type: UNION query", "luther", "blisset", "fluffy", "179ad45c6ce2cb97cf1029e212046e81", "NULL", "nameisnull", "testpass")),
+        ("-u <url> -z \"tec=B\" --hex --fresh-queries --threads=4 --sql-query=\"SELECT * FROM users\"", ("SELECT * FROM users [30]", "nameisnull")),
         ("-u \"<url>&echo=foobar*\" --flush-session", ("might be vulnerable to cross-site scripting",)),
         ("-u \"<url>&query=*\" --flush-session --technique=Q --banner", ("Title: SQLite inline queries", "banner: '3.")),
-        ("-d \"<direct>\" --flush-session --dump -T users --dump-format=SQLITE --binary-fields=name --where \"id=3\"", ("7775", "179ad45c6ce2cb97cf1029e212046e81 (testpass)", "dumped to SQLITE database")),
-        ("-d \"<direct>\" --flush-session --banner --schema --sql-query=\"UPDATE users SET name='foobar' WHERE id=5; SELECT * FROM users; SELECT 987654321\"", ("banner: '3.", "INTEGER", "TEXT", "id", "name", "surname", "5,foobar,nameisnull", "'987654321'",)),
+        ("-d \"<direct>\" --flush-session --dump -T creds --dump-format=SQLITE --binary-fields=password_hash --where \"user_id=5\"", ("3137396164343563366365326362393763663130323965323132303436653831", "dumped to SQLITE database")),
+        ("-d \"<direct>\" --flush-session --banner --schema --sql-query=\"UPDATE users SET name='foobar' WHERE id=4; SELECT * FROM users; SELECT 987654321\"", ("banner: '3.", "INTEGER", "TEXT", "id", "name", "surname", "4,foobar,nameisnull", "'987654321'",)),
+        ("-u <base>csrf --data=\"id=1&csrf_token=1\" --banner --answers=\"update=y\" --flush-session", ("back-end DBMS: SQLite", "banner: '3.")),
         ("--purge -v 3", ("~ERROR", "~CRITICAL", "deleting the whole directory tree")),
     )
 
     retVal = True
     count = 0
+    cleanups = []
 
     while True:
         address, port = "127.0.0.1", random.randint(10000, 65535)
@@ -130,9 +132,11 @@ def vulnTest():
 
     handle, config = tempfile.mkstemp(suffix=".conf")
     os.close(handle)
+    cleanups.append(config)
 
     handle, database = tempfile.mkstemp(suffix=".sqlite")
     os.close(handle)
+    cleanups.append(database)
 
     with sqlite3.connect(database) as conn:
         c = conn.cursor()
@@ -140,12 +144,15 @@ def vulnTest():
 
     handle, request = tempfile.mkstemp(suffix=".req")
     os.close(handle)
+    cleanups.append(request)
 
     handle, log = tempfile.mkstemp(suffix=".log")
     os.close(handle)
+    cleanups.append(log)
 
     handle, multiple = tempfile.mkstemp(suffix=".lst")
     os.close(handle)
+    cleanups.append(multiple)
 
     content = "POST / HTTP/1.0\nUser-Agent: foobar\nHost: %s:%s\n\nid=1\n" % (address, port)
     with open(request, "w+") as f:
@@ -176,7 +183,7 @@ def vulnTest():
 
     for options, checks in TESTS:
         status = '%d/%d (%d%%) ' % (count, len(TESTS), round(100.0 * count / len(TESTS)))
-        dataToStdout("\r[%s] [INFO] complete: %s" % (time.strftime("%X"), status))
+        dataToStdout("\r[%s] [INFO] completed: %s" % (time.strftime("%X"), status))
 
         if IS_WIN and "uraj" in options:
             options = options.replace(u"\u0161u\u0107uraj", "sucuraj")
@@ -192,6 +199,8 @@ def vulnTest():
             os.close(handle)
             cmd = cmd.replace("<tmpfile>", tmp)
 
+        os.environ["SQLMAP_UNSAFE_EVAL"] = '1'
+
         output = shellExec(cmd)
 
         if not all((check in output if not check.startswith('~') else check[1:] not in output) for check in checks) or "unhandled exception" in output:
@@ -206,6 +215,12 @@ def vulnTest():
         logger.info("vuln test final result: PASSED")
     else:
         logger.error("vuln test final result: FAILED")
+
+    for filename in cleanups:
+        try:
+            os.remove(filename)
+        except:
+            pass
 
     return retVal
 
@@ -269,7 +284,7 @@ def smokeTest():
 
                 count += 1
                 status = '%d/%d (%d%%) ' % (count, length, round(100.0 * count / length))
-                dataToStdout("\r[%s] [INFO] complete: %s" % (time.strftime("%X"), status))
+                dataToStdout("\r[%s] [INFO] completed: %s" % (time.strftime("%X"), status))
 
     def _(node):
         for __ in dir(node):

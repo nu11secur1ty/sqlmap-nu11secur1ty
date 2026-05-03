@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -239,6 +239,8 @@ def bisection(payload, expression, length=None, charsetType=None, firstChar=None
             Used in inference - in time-based SQLi if original and retrieved value are not equal there will be a deliberate delay
             """
 
+            threadData = getCurrentThreadData()
+
             validationPayload = re.sub(r"(%s.*?)%s(.*?%s)" % (PAYLOAD_DELIMITER, INFERENCE_GREATER_CHAR, PAYLOAD_DELIMITER), r"\g<1>%s\g<2>" % INFERENCE_NOT_EQUALS_CHAR, payload)
 
             if "'%s'" % CHAR_INFERENCE_MARK not in payload:
@@ -268,6 +270,8 @@ def bisection(payload, expression, length=None, charsetType=None, firstChar=None
             numerical values is exactly 1
             """
 
+            threadData = getCurrentThreadData()
+
             result = tryHint(idx)
 
             if result:
@@ -287,6 +291,8 @@ def bisection(payload, expression, length=None, charsetType=None, firstChar=None
             if "'%s'" % CHAR_INFERENCE_MARK in payload:
                 for char in ('\n', '\r'):
                     if ord(char) in charTbl:
+                        if not isinstance(charTbl, list):
+                            charTbl = list(charTbl)
                         charTbl.remove(ord(char))
 
             if not charTbl:
@@ -409,7 +415,7 @@ def bisection(payload, expression, length=None, charsetType=None, firstChar=None
                             # list
                             if expand and shiftTable:
                                 charTbl = xrange(maxChar + 1, (maxChar + 1) << shiftTable.pop())
-                                originalTbl = xrange(charTbl)
+                                originalTbl = xrange(charTbl[0], charTbl[-1] + 1)
                                 maxChar = maxValue = charTbl[-1]
                                 minValue = charTbl[0]
                             else:
@@ -465,13 +471,16 @@ def bisection(payload, expression, length=None, charsetType=None, firstChar=None
                 bit = 0
                 while len(candidates) > 1:
                     bits = {}
+                    maxCandidate = max(candidates)
+                    maxBits = maxCandidate.bit_length() if maxCandidate > 0 else 1
+
                     for candidate in candidates:
-                        bit = 0
-                        while candidate:
+                        for bit in xrange(maxBits):
                             bits.setdefault(bit, 0)
-                            bits[bit] += 1 if candidate & 1 else -1
-                            candidate >>= 1
-                            bit += 1
+                            if candidate & (1 << bit):
+                                bits[bit] += 1
+                            else:
+                                bits[bit] -= 1
 
                     choice = sorted(bits.items(), key=lambda _: abs(_[1]))[0][0]
                     mask = 1 << choice
@@ -493,7 +502,10 @@ def bisection(payload, expression, length=None, charsetType=None, firstChar=None
                     incrementCounter(getTechnique())
 
                     if result:
-                        return decodeIntToUnicode(candidates[0])
+                        if candidates[0] == 0:      # Trailing zeros
+                            return None
+                        else:
+                            return decodeIntToUnicode(candidates[0])
 
         # Go multi-threading (--threads > 1)
         if numThreads > 1 and isinstance(length, int) and length > 1:

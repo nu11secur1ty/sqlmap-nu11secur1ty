@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -107,12 +107,24 @@ def _oneShotUnionUse(expression, unpack=True, limited=False):
             for _page in (page or "", (page or "").replace('\\"', '"')):
                 if Backend.isDbms(DBMS.MSSQL):
                     output = extractRegexResult(r"%s(?P<result>.*)%s" % (kb.chars.start, kb.chars.stop), removeReflectiveValues(_page, payload))
+
                     if output:
                         try:
-                            retVal = ""
-                            fields = re.findall(r'"([^"]+)":', extractRegexResult(r"{(?P<result>[^}]+)}", output))
-                            for row in json.loads(output):
-                                retVal += "%s%s%s" % (kb.chars.start, kb.chars.delimiter.join(getUnicode(row[field] or NULL) for field in fields), kb.chars.stop)
+                            retVal = None
+                            output_decoded = htmlUnescape(output)
+                            json_data = json.loads(output_decoded, object_pairs_hook=OrderedDict)
+
+                            if not isinstance(json_data, list):
+                                json_data = [json_data]
+
+                            if json_data and isinstance(json_data[0], dict):
+                                fields = list(json_data[0].keys())
+
+                                if fields:
+                                    parts = []
+                                    for row in json_data:
+                                        parts.append("%s%s%s" % (kb.chars.start, kb.chars.delimiter.join(getUnicode(row.get(field) or NULL) for field in fields), kb.chars.stop))
+                                    retVal = "".join(parts)
                         except:
                             retVal = None
                         else:
@@ -266,8 +278,8 @@ def unionUse(expression, unpack=True, dump=False):
                 query = expression.replace(expressionFields, "'%s'||JSON_ARRAYAGG(%s)||'%s'" % (kb.chars.start, ("||'%s'||" % kb.chars.delimiter).join(expressionFieldsList), kb.chars.stop), 1)
             elif Backend.isDbms(DBMS.SQLITE):
                 query = expression.replace(expressionFields, "'%s'||JSON_GROUP_ARRAY(%s)||'%s'" % (kb.chars.start, ("||'%s'||" % kb.chars.delimiter).join("COALESCE(%s,' ')" % field for field in expressionFieldsList), kb.chars.stop), 1)
-            elif Backend.isDbms(DBMS.PGSQL):    # Note: ARRAY_AGG does CSV alike output, thus enclosing start/end inside each item
-                query = expression.replace(expressionFields, "ARRAY_AGG('%s'||%s||'%s')::text" % (kb.chars.start, ("||'%s'||" % kb.chars.delimiter).join("COALESCE(%s::text,' ')" % field for field in expressionFieldsList), kb.chars.stop), 1)
+            elif Backend.isDbms(DBMS.PGSQL):
+                query = expression.replace(expressionFields, "STRING_AGG('%s'||%s||'%s','')" % (kb.chars.start, ("||'%s'||" % kb.chars.delimiter).join("COALESCE(%s::text,' ')" % field for field in expressionFieldsList), kb.chars.stop), 1)
             elif Backend.isDbms(DBMS.MSSQL):
                 query = "'%s'+(%s FOR JSON AUTO, INCLUDE_NULL_VALUES)+'%s'" % (kb.chars.start, expression, kb.chars.stop)
             output = _oneShotUnionUse(query, False)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -13,6 +13,7 @@ from lib.core.common import Backend
 from lib.core.common import filterPairValues
 from lib.core.common import getLimitRange
 from lib.core.common import isAdminFromPrivileges
+from lib.core.common import isDBMSVersionAtLeast
 from lib.core.common import isInferenceAvailable
 from lib.core.common import isNoneValue
 from lib.core.common import isNullValue
@@ -104,6 +105,7 @@ class Users(object):
 
         condition = (Backend.isDbms(DBMS.MSSQL) and Backend.isVersionWithin(("2005", "2008")))
         condition |= (Backend.isDbms(DBMS.MYSQL) and not kb.data.has_information_schema)
+        condition |= (Backend.isDbms(DBMS.H2) and not isDBMSVersionAtLeast("2"))
 
         if any(isTechniqueAvailable(_) for _ in (PAYLOAD.TECHNIQUE.UNION, PAYLOAD.TECHNIQUE.ERROR, PAYLOAD.TECHNIQUE.QUERY)) or conf.direct:
             if Backend.isDbms(DBMS.MYSQL) and Backend.isFork(FORK.DRIZZLE):
@@ -455,7 +457,7 @@ class Users(object):
 
                             # In MySQL >= 5.0 and Oracle we get the list
                             # of privileges as string
-                            elif Backend.isDbms(DBMS.ORACLE) or (Backend.isDbms(DBMS.MYSQL) and kb.data.has_information_schema) or Backend.getIdentifiedDbms() in (DBMS.VERTICA, DBMS.MIMERSQL, DBMS.CUBRID):
+                            elif Backend.isDbms(DBMS.ORACLE) or (Backend.isDbms(DBMS.MYSQL) and kb.data.has_information_schema) or Backend.getIdentifiedDbms() in (DBMS.VERTICA, DBMS.MIMERSQL, DBMS.CUBRID, DBMS.SNOWFLAKE):
                                 privileges.add(privilege)
 
                             # In MySQL < 5.0 we get Y if the privilege is

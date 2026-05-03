@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -521,7 +521,7 @@ def checkSqlInjection(place, parameter, value):
 
                                     if ratio == 1.0:
                                         continue
-                                except (MemoryError, OverflowError):
+                                except:
                                     pass
 
                             # Perform the test's True request
@@ -554,7 +554,7 @@ def checkSqlInjection(place, parameter, value):
 
                                     injectable = True
 
-                                elif (threadData.lastComparisonRatio or 0) > UPPER_RATIO_BOUND and not any((conf.string, conf.notString, conf.regexp, conf.code, kb.nullConnection)):
+                                elif (threadData.lastComparisonRatio or 0) > UPPER_RATIO_BOUND and not any((conf.string, conf.notString, conf.regexp, conf.code, conf.titles, kb.nullConnection)):
                                     originalSet = set(getFilteredPageContent(kb.pageTemplate, True, "\n").split("\n"))
                                     trueSet = set(getFilteredPageContent(truePage, True, "\n").split("\n"))
                                     falseSet = set(getFilteredPageContent(falsePage, True, "\n").split("\n"))
@@ -580,7 +580,7 @@ def checkSqlInjection(place, parameter, value):
                                                     break
 
                             if injectable:
-                                if kb.pageStable and not any((conf.string, conf.notString, conf.regexp, conf.code, kb.nullConnection)):
+                                if kb.pageStable and not any((conf.string, conf.notString, conf.regexp, conf.code, conf.titles, kb.nullConnection)):
                                     if all((falseCode, trueCode)) and falseCode != trueCode and trueCode != kb.heuristicCode:
                                         suggestion = conf.code = trueCode
 
@@ -1095,6 +1095,8 @@ def heuristicCheckSqlInjection(place, parameter):
             errMsg += "int.TryParse(Request.QueryString[\"%s\"], out %s)" % (parameter, parameter)
         elif platform == WEB_PLATFORM.JSP:
             errMsg += "%s=Integer.parseInt(request.getParameter(\"%s\"))" % (parameter, parameter)
+        elif platform == WEB_PLATFORM.CFM:
+            errMsg += "%s=Val(url.%s)" % (parameter, parameter)
         else:
             errMsg += "$%s=intval($_REQUEST[\"%s\"])" % (parameter, parameter)
 
@@ -1134,15 +1136,18 @@ def heuristicCheckSqlInjection(place, parameter):
         if conf.beep:
             beep()
 
-    for match in re.finditer(FI_ERROR_REGEX, page or ""):
-        if randStr1.lower() in match.group(0).lower():
-            infoMsg = "heuristic (FI) test shows that %sparameter '%s' might be vulnerable to file inclusion (FI) attacks" % ("%s " % paramType if paramType != parameter else "", parameter)
-            logger.info(infoMsg)
+    try:
+        for match in re.finditer(FI_ERROR_REGEX, page or ""):
+            if randStr1.lower() in match.group(0).lower():
+                infoMsg = "heuristic (FI) test shows that %sparameter '%s' might be vulnerable to file inclusion (FI) attacks" % ("%s " % paramType if paramType != parameter else "", parameter)
+                logger.info(infoMsg)
 
-            if conf.beep:
-                beep()
+                if conf.beep:
+                    beep()
 
-            break
+                break
+    except (SystemError, RuntimeError) as ex:
+        logger.debug("Skipping FI heuristic due to regex failure: %s", getSafeExString(ex))
 
     kb.disableHtmlDecoding = False
     kb.heuristicMode = False
@@ -1372,6 +1377,7 @@ def checkWaf():
     kb.choices.redirect = REDIRECTION.YES
     kb.resendPostOnRedirect = False
     conf.timeout = IPS_WAF_CHECK_TIMEOUT
+    kb.checkWafMode = True
 
     try:
         retVal = (Request.queryPage(place=place, value=value, getRatioValue=True, noteResponseTime=False, silent=True, raise404=False, disableTampering=True)[1] or 0) < IPS_WAF_CHECK_RATIO
@@ -1379,6 +1385,7 @@ def checkWaf():
         retVal = True
     finally:
         kb.matchRatio = None
+        kb.checkWafMode = False
 
         conf.timeout = popValue()
         kb.resendPostOnRedirect = popValue()

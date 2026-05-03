@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -119,7 +119,10 @@ class Agent(object):
             if place == PLACE.URI:
                 origValue = origValue.split(kb.customInjectionMark)[0]
             else:
-                origValue = filterNone(re.search(_, origValue.split(BOUNDED_INJECTION_MARKER)[0]) for _ in (r"\w+\Z", r"[^\"'><]+\Z", r"[^ ]+\Z"))[0].group(0)
+                try:
+                    origValue = filterNone(re.search(_, origValue.split(BOUNDED_INJECTION_MARKER)[0]) for _ in (r"\w+\Z", r"[^\"'><]+\Z", r"[^ ]+\Z"))[0].group(0)
+                except IndexError:
+                    pass
             origValue = origValue[origValue.rfind('/') + 1:]
             for char in ('?', '=', ':', ',', '&'):
                 if char in origValue:
@@ -407,6 +410,9 @@ class Agent(object):
         """
 
         if payload:
+            if Backend.isDbms(DBMS.SPANNER):
+                payload = payload.replace(" FROM default.", " FROM ").replace(" FROM `default`.", " FROM ")
+
             for match in re.finditer(r"(?s)%s(.*?)%s" % (BOUNDED_BASE64_MARKER, BOUNDED_BASE64_MARKER), payload):
                 _ = encodeBase64(match.group(1), binary=False, encoding=conf.encoding or UNICODE_ENCODING, safe=conf.base64Safe)
                 payload = payload.replace(match.group(0), _)
@@ -721,7 +727,7 @@ class Agent(object):
             elif fieldsNoSelect:
                 concatenatedQuery = "CONCAT('%s',%s,'%s')" % (kb.chars.start, concatenatedQuery, kb.chars.stop)
 
-        elif Backend.getIdentifiedDbms() in (DBMS.PGSQL, DBMS.ORACLE, DBMS.SQLITE, DBMS.DB2, DBMS.FIREBIRD, DBMS.HSQLDB, DBMS.H2, DBMS.MONETDB, DBMS.DERBY, DBMS.VERTICA, DBMS.MCKOI, DBMS.PRESTO, DBMS.ALTIBASE, DBMS.MIMERSQL, DBMS.CRATEDB, DBMS.CUBRID, DBMS.CACHE, DBMS.EXTREMEDB, DBMS.FRONTBASE, DBMS.RAIMA, DBMS.VIRTUOSO):
+        elif Backend.getIdentifiedDbms() in (DBMS.PGSQL, DBMS.ORACLE, DBMS.SQLITE, DBMS.DB2, DBMS.FIREBIRD, DBMS.HSQLDB, DBMS.H2, DBMS.MONETDB, DBMS.DERBY, DBMS.VERTICA, DBMS.MCKOI, DBMS.PRESTO, DBMS.ALTIBASE, DBMS.MIMERSQL, DBMS.CRATEDB, DBMS.CUBRID, DBMS.CACHE, DBMS.EXTREMEDB, DBMS.FRONTBASE, DBMS.RAIMA, DBMS.VIRTUOSO, DBMS.SNOWFLAKE, DBMS.SPANNER):
             if fieldsExists:
                 concatenatedQuery = concatenatedQuery.replace("SELECT ", "'%s'||" % kb.chars.start, 1)
                 concatenatedQuery += "||'%s'" % kb.chars.stop
@@ -744,7 +750,7 @@ class Agent(object):
                 concatenatedQuery = concatenatedQuery.replace("SELECT ", "'%s'+" % kb.chars.start, 1)
                 concatenatedQuery += "+'%s'" % kb.chars.stop
             elif fieldsSelectTop:
-                topNum = re.search(r"\ASELECT\s+TOP(\s+\d+|\s*\([^)]+\))\s+", concatenatedQuery, re.I).group(1)
+                topNum = fieldsSelectTop.group(1)
                 concatenatedQuery = concatenatedQuery.replace("SELECT TOP%s " % topNum, "TOP%s '%s'+" % (topNum, kb.chars.start), 1)
                 concatenatedQuery = concatenatedQuery.replace(" FROM ", "+'%s' FROM " % kb.chars.stop, 1)
             elif fieldsSelectCase:
@@ -883,14 +889,16 @@ class Agent(object):
             query = query[len("TOP %s " % topNum):]
             unionQuery += "TOP %s " % topNum
 
-        intoRegExp = re.search(r"(\s+INTO (DUMP|OUT)FILE\s+'(.+?)')", query, re.I)
+        intoFileRegExp = re.search(r"(\s+INTO (DUMP|OUT)FILE\s+'(.+?)')", query, re.I)
 
-        if intoRegExp:
-            intoRegExp = intoRegExp.group(1)
-            query = query[:query.index(intoRegExp)]
+        if intoFileRegExp:
+            infoFile = intoFileRegExp.group(1)
+            query = query[:query.index(infoFile)]
 
             position = 0
             char = NULL
+        else:
+            infoFile = None
 
         for element in xrange(0, count):
             if element > 0:
@@ -909,8 +917,8 @@ class Agent(object):
         if fromTable and not unionQuery.endswith(fromTable):
             unionQuery += fromTable
 
-        if intoRegExp:
-            unionQuery += intoRegExp
+        if infoFile:
+            unionQuery += infoFile
 
         if multipleUnions:
             unionQuery += " UNION ALL SELECT "
@@ -1040,7 +1048,7 @@ class Agent(object):
             limitStr = queries[Backend.getIdentifiedDbms()].limit.query % (num, 1)
             limitedQuery += " %s" % limitStr
 
-        elif Backend.getIdentifiedDbms() in (DBMS.H2, DBMS.CRATEDB, DBMS.CLICKHOUSE):
+        elif Backend.getIdentifiedDbms() in (DBMS.H2, DBMS.CRATEDB, DBMS.CLICKHOUSE, DBMS.SNOWFLAKE, DBMS.SPANNER):
             limitStr = queries[Backend.getIdentifiedDbms()].limit.query % (1, num)
             limitedQuery += " %s" % limitStr
 

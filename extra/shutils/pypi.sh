@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
 
 if [ ! -f ~/.pypirc ]; then
     echo "File ~/.pypirc is missing"
@@ -9,14 +11,15 @@ declare -x SCRIPTPATH="${0}"
 SETTINGS="${SCRIPTPATH%/*}/../../lib/core/settings.py"
 VERSION=$(cat $SETTINGS | grep -E "^VERSION =" | cut -d '"' -f 2 | cut -d '.' -f 1-3)
 TYPE=pip
-TMP_DIR=/tmp/pypi
-mkdir $TMP_DIR
-cd $TMP_DIR
-cat > $TMP_DIR/setup.py << EOF
+TMP_DIR="$(mktemp -d -t pypi.XXXXXXXX)"
+cleanup() { rm -rf -- "${TMP_DIR:?}"; }
+trap cleanup EXIT
+cd "$TMP_DIR"
+cat > "$TMP_DIR/setup.py" << EOF
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -68,7 +71,7 @@ cat > sqlmap/__init__.py << EOF
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -82,7 +85,7 @@ cat > README.rst << "EOF"
 sqlmap
 ======
 
-|Python 2.6|2.7|3.x| |License| |X|
+|Python 2.7|3.x| |License| |X|
 
 sqlmap is an open source penetration testing tool that automates the
 process of detecting and exploiting SQL injection flaws and taking over
@@ -123,7 +126,7 @@ If you prefer fetching daily updates, you can download sqlmap by cloning the
     git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git sqlmap-dev
 
 sqlmap works out of the box with
-`Python <http://www.python.org/download/>`__ version **2.6**, **2.7** and
+`Python <http://www.python.org/download/>`__ version **2.7** and
 **3.x** on any platform.
 
 Usage
@@ -164,7 +167,7 @@ Links
 -  Demos: http://www.youtube.com/user/inquisb/videos
 -  Screenshots: https://github.com/sqlmapproject/sqlmap/wiki/Screenshots
 
-.. |Python 2.6|2.7|3.x| image:: https://img.shields.io/badge/python-2.6|2.7|3.x-yellow.svg
+.. |Python 2.7|3.x| image:: https://img.shields.io/badge/python-2.7|3.x-yellow.svg
    :target: https://www.python.org/
 .. |License| image:: https://img.shields.io/badge/license-GPLv2-red.svg
    :target: https://raw.githubusercontent.com/sqlmapproject/sqlmap/master/LICENSE
@@ -176,8 +179,14 @@ Links
 EOF
 sed -i "s/^VERSION =.*/VERSION = \"$VERSION\"/g" sqlmap/lib/core/settings.py
 sed -i "s/^TYPE =.*/TYPE = \"$TYPE\"/g" sqlmap/lib/core/settings.py
-for file in $(find sqlmap -type f | grep -v -E "\.(git|yml)"); do echo include $file >> MANIFEST.in; done
+: > MANIFEST.in
+while IFS= read -r -d '' file; do
+    case "$file" in
+        *.git|*.yml) continue ;;
+    esac
+    echo "include $file" >> MANIFEST.in
+done < <(find sqlmap -type f -print0)
 python setup.py sdist bdist_wheel
 twine check dist/*
 twine upload --config-file=~/.pypirc dist/*
-rm -rf $TMP_DIR
+rm -rf "$TMP_DIR"

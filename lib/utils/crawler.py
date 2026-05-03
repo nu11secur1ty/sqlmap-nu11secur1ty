@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -254,7 +254,7 @@ def storeResultsToFile(results):
         infoMsg = "writing crawling results to a temporary file '%s' " % filename
         logger.info(infoMsg)
 
-        with openFile(filename, "w+b") as f:
+        with openFile(filename, "w+") as f:
             if conf.forms:
                 f.write("URL,POST\n")
 

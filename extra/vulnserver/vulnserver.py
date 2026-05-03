@@ -3,7 +3,7 @@
 """
 vulnserver.py - Trivial SQLi vulnerable HTTP server (Note: for testing purposes)
 
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -11,8 +11,10 @@ from __future__ import print_function
 
 import base64
 import json
+import random
 import re
 import sqlite3
+import string
 import sys
 import threading
 import traceback
@@ -49,9 +51,70 @@ SCHEMA = """
     );
     INSERT INTO users (id, name, surname) VALUES (1, 'luther', 'blisset');
     INSERT INTO users (id, name, surname) VALUES (2, 'fluffy', 'bunny');
-    INSERT INTO users (id, name, surname) VALUES (3, 'wu', '179ad45c6ce2cb97cf1029e212046e81');
-    INSERT INTO users (id, name, surname) VALUES (4, 'sqlmap/1.0-dev (https://sqlmap.org)', 'user agent header');
-    INSERT INTO users (id, name, surname) VALUES (5, NULL, 'nameisnull');
+    INSERT INTO users (id, name, surname) VALUES (3, 'wu', 'ming');
+    INSERT INTO users (id, name, surname) VALUES (4, NULL, 'nameisnull');
+    INSERT INTO users (id, name, surname) VALUES (5, 'mark', 'lewis');
+    INSERT INTO users (id, name, surname) VALUES (6, 'ada', 'lovelace');
+    INSERT INTO users (id, name, surname) VALUES (7, 'grace', 'hopper');
+    INSERT INTO users (id, name, surname) VALUES (8, 'alan', 'turing');
+    INSERT INTO users (id, name, surname) VALUES (9, 'margaret','hamilton');
+    INSERT INTO users (id, name, surname) VALUES (10, 'donald', 'knuth');
+    INSERT INTO users (id, name, surname) VALUES (11, 'tim', 'bernerslee');
+    INSERT INTO users (id, name, surname) VALUES (12, 'linus', 'torvalds');
+    INSERT INTO users (id, name, surname) VALUES (13, 'ken', 'thompson');
+    INSERT INTO users (id, name, surname) VALUES (14, 'dennis', 'ritchie');
+    INSERT INTO users (id, name, surname) VALUES (15, 'barbara', 'liskov');
+    INSERT INTO users (id, name, surname) VALUES (16, 'edsger', 'dijkstra');
+    INSERT INTO users (id, name, surname) VALUES (17, 'john', 'mccarthy');
+    INSERT INTO users (id, name, surname) VALUES (18, 'leslie', 'lamport');
+    INSERT INTO users (id, name, surname) VALUES (19, 'niklaus', 'wirth');
+    INSERT INTO users (id, name, surname) VALUES (20, 'bjarne', 'stroustrup');
+    INSERT INTO users (id, name, surname) VALUES (21, 'guido', 'vanrossum');
+    INSERT INTO users (id, name, surname) VALUES (22, 'brendan', 'eich');
+    INSERT INTO users (id, name, surname) VALUES (23, 'james', 'gosling');
+    INSERT INTO users (id, name, surname) VALUES (24, 'andrew', 'tanenbaum');
+    INSERT INTO users (id, name, surname) VALUES (25, 'yukihiro','matsumoto');
+    INSERT INTO users (id, name, surname) VALUES (26, 'radia', 'perlman');
+    INSERT INTO users (id, name, surname) VALUES (27, 'katherine','johnson');
+    INSERT INTO users (id, name, surname) VALUES (28, 'hady', 'lamarr');
+    INSERT INTO users (id, name, surname) VALUES (29, 'frank', 'miller');
+    INSERT INTO users (id, name, surname) VALUES (30, 'john', 'steward');
+
+    CREATE TABLE creds (
+        user_id INTEGER,
+        password_hash TEXT,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    INSERT INTO creds (user_id, password_hash) VALUES (1, 'db3a16990a0008a3b04707fdef6584a0');
+    INSERT INTO creds (user_id, password_hash) VALUES (2, '4db967ce67b15e7fb84c266a76684729');
+    INSERT INTO creds (user_id, password_hash) VALUES (3, 'f5a2950eaa10f9e99896800eacbe8275');
+    INSERT INTO creds (user_id, password_hash) VALUES (4, NULL);
+    INSERT INTO creds (user_id, password_hash) VALUES (5, '179ad45c6ce2cb97cf1029e212046e81');
+    INSERT INTO creds (user_id, password_hash) VALUES (6, '0f1e2d3c4b5a69788796a5b4c3d2e1f0');
+    INSERT INTO creds (user_id, password_hash) VALUES (7, 'a1b2c3d4e5f60718293a4b5c6d7e8f90');
+    INSERT INTO creds (user_id, password_hash) VALUES (8, '1a2b3c4d5e6f708192a3b4c5d6e7f809');
+    INSERT INTO creds (user_id, password_hash) VALUES (9, '9f8e7d6c5b4a3928170605f4e3d2c1b0');
+    INSERT INTO creds (user_id, password_hash) VALUES (10, '3c2d1e0f9a8b7c6d5e4f30291807f6e5');
+    INSERT INTO creds (user_id, password_hash) VALUES (11, 'b0c1d2e3f405162738495a6b7c8d9eaf');
+    INSERT INTO creds (user_id, password_hash) VALUES (12, '6e5d4c3b2a190807f6e5d4c3b2a1908f');
+    INSERT INTO creds (user_id, password_hash) VALUES (13, '11223344556677889900aabbccddeeff');
+    INSERT INTO creds (user_id, password_hash) VALUES (14, 'ffeeddccbbaa00998877665544332211');
+    INSERT INTO creds (user_id, password_hash) VALUES (15, '1234567890abcdef1234567890abcdef');
+    INSERT INTO creds (user_id, password_hash) VALUES (16, 'abcdef1234567890abcdef1234567890');
+    INSERT INTO creds (user_id, password_hash) VALUES (17, '0a1b2c3d4e5f60718a9b0c1d2e3f4051');
+    INSERT INTO creds (user_id, password_hash) VALUES (18, '51f04e3d2c1b0a9871605f4e3d2c1b0a');
+    INSERT INTO creds (user_id, password_hash) VALUES (19, '89abcdef0123456789abcdef01234567');
+    INSERT INTO creds (user_id, password_hash) VALUES (20, '76543210fedcba9876543210fedcba98');
+    INSERT INTO creds (user_id, password_hash) VALUES (21, '13579bdf2468ace013579bdf2468ace0');
+    INSERT INTO creds (user_id, password_hash) VALUES (22, '02468ace13579bdf02468ace13579bdf');
+    INSERT INTO creds (user_id, password_hash) VALUES (23, 'deadbeefdeadbeefdeadbeefdeadbeef');
+    INSERT INTO creds (user_id, password_hash) VALUES (24, 'cafebabecafebabecafebabecafebabe');
+    INSERT INTO creds (user_id, password_hash) VALUES (25, '00112233445566778899aabbccddeeff');
+    INSERT INTO creds (user_id, password_hash) VALUES (26, 'f0e1d2c3b4a5968778695a4b3c2d1e0f');
+    INSERT INTO creds (user_id, password_hash) VALUES (27, '7f6e5d4c3b2a190807f6e5d4c3b2a190');
+    INSERT INTO creds (user_id, password_hash) VALUES (28, '908f7e6d5c4b3a291807f6e5d4c3b2a1');
+    INSERT INTO creds (user_id, password_hash) VALUES (29, '3049b791fa83e2f42f37bae18634b92d');
+    INSERT INTO creds (user_id, password_hash) VALUES (30, 'd59a348f90d757c7da30418773424b5e');
 """
 
 LISTEN_ADDRESS = "localhost"
@@ -62,11 +125,15 @@ _cursor = None
 _lock = None
 _server = None
 _alive = False
+_csrf_token = None
 
 def init(quiet=False):
     global _conn
     global _cursor
     global _lock
+    global _csrf_token
+
+    _csrf_token = "".join(random.sample(string.ascii_letters + string.digits, 20))
 
     _conn = sqlite3.connect(":memory:", isolation_level=None, check_same_thread=False)
     _cursor = _conn.cursor()
@@ -131,6 +198,28 @@ class ReqHandler(BaseHTTPRequestHandler):
 
         self.url, self.params = path, params
 
+        if self.url == "/csrf":
+            if self.params.get("csrf_token") == _csrf_token:
+                self.url = "/"
+            else:
+                self.send_response(OK)
+                self.send_header("Content-type", "text/html; charset=%s" % UNICODE_ENCODING)
+                self.end_headers()
+
+                form = (
+                    "<html><body>"
+                    "CSRF protection check<br>"
+                    "<form action='/csrf' method='POST'>"
+                    "<input type='hidden' name='csrf_token' value='%s'>"
+                    "id: <input type='text' name='id'>"
+                    "<input type='submit' value='Submit'>"
+                    "</form>"
+                    "</body></html>"
+                ) % _csrf_token
+
+                self.wfile.write(form.encode(UNICODE_ENCODING))
+                return
+
         if self.url == '/':
             if not any(_ in self.params for _ in ("id", "query")):
                 self.send_response(OK)
@@ -139,7 +228,7 @@ class ReqHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b"<!DOCTYPE html><html><head><title>vulnserver</title></head><body><h3>GET:</h3><a href='/?id=1'>link</a><hr><h3>POST:</h3><form method='post'>ID: <input type='text' name='id'><input type='submit' value='Submit'></form></body></html>")
             else:
-                code, output = OK, ""
+                code, output = OK, "<body><html>"
 
                 try:
                     if self.params.get("echo", ""):
@@ -176,6 +265,11 @@ class ReqHandler(BaseHTTPRequestHandler):
                             output += "</table>\n"
                         else:
                             output += "no results found"
+
+                        if not results:
+                            output = "<title>No results</title>" + output
+                        else:
+                            output = "<title>Results</title>" + output
 
                     output += "</body></html>"
                 except Exception as ex:

@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
 import codecs
 import collections
+import difflib
 import inspect
 import logging
 import os
@@ -101,7 +102,7 @@ def dirtyPatches():
 
     # Reference: https://github.com/sqlmapproject/sqlmap/issues/5929
     try:
-        global collections
+        import collections
         if not hasattr(collections, "MutableSet"):
             import collections.abc
             collections.MutableSet = collections.abc.MutableSet
@@ -139,7 +140,7 @@ def dirtyPatches():
     # Installing "reversible" unicode (decoding) error handler
     def _reversible(ex):
         if INVALID_UNICODE_PRIVATE_AREA:
-            return (u"".join(_unichr(int('000f00%2x' % (_ if isinstance(_, int) else ord(_)), 16)) for _ in ex.object[ex.start:ex.end]), ex.end)
+            return (u"".join(_unichr(int('000f00%02x' % (_ if isinstance(_, int) else ord(_)), 16)) for _ in ex.object[ex.start:ex.end]), ex.end)
         else:
             return (u"".join(INVALID_UNICODE_CHAR_FORMAT % (_ if isinstance(_, int) else ord(_)) for _ in ex.object[ex.start:ex.end]), ex.end)
 
@@ -159,6 +160,66 @@ def dirtyPatches():
                 logging._lock.release()
 
         logging._releaseLock = _releaseLock
+
+    from xml.etree import ElementTree as et
+    if not getattr(et, "_patched", False):
+        _real_parse = et.parse
+
+        def _safe_parse(source, parser=None):
+            if parser is None:
+                parser = et.XMLParser()
+                if hasattr(parser, "parser"):
+                    def reject(*args): raise ValueError("XML entities are forbidden")
+                    parser.parser.EntityDeclHandler = reject
+                    parser.parser.UnparsedEntityDeclHandler = reject
+
+            return _real_parse(source, parser=parser)
+
+        et.parse = _safe_parse
+        et._patched = True
+
+    import io
+    import pickle
+    if not getattr(pickle, "_patched", False):
+        class RestrictedUnpickler(pickle.Unpickler):
+            def find_class(self, module, name):
+                # blacklist for OS-level execution modules
+                if module in ("os", "subprocess", "sys", "posix", "nt", "pty", "commands", "shutil"):
+                    raise ValueError("Unpickling of module '%s' is forbidden" % module)
+
+                # Python 2/3 method resolution
+                if hasattr(pickle.Unpickler, "find_class"):
+                    return pickle.Unpickler.find_class(self, module, name)
+
+                __import__(module)
+                return getattr(sys.modules[module], name)
+
+        def _safe_loads(data):
+            try:
+                stream = io.BytesIO(data)
+            except TypeError:
+                stream = io.StringIO(data)
+
+            return RestrictedUnpickler(stream).load()
+
+        pickle.loads = _safe_loads
+        pickle._patched = True
+
+    try:
+        import cPickle
+        if not getattr(cPickle, "_patched", False):
+            cPickle.loads = pickle.loads
+            cPickle._patched = True
+    except ImportError:
+        pass
+
+    try:
+        import builtins
+    except ImportError:
+        import __builtin__ as builtins
+
+    if "enumerate" in difflib.__dict__ and difflib.enumerate is not builtins.enumerate:
+        difflib.enumerate = builtins.enumerate
 
 def resolveCrossReferences():
     """

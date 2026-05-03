@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -39,6 +39,8 @@ from lib.core.settings import SYBASE_ALIASES
 from lib.core.settings import VERTICA_ALIASES
 from lib.core.settings import VIRTUOSO_ALIASES
 from lib.core.settings import CLICKHOUSE_ALIASES
+from lib.core.settings import SNOWFLAKE_ALIASES
+from lib.core.settings import SPANNER_ALIASES
 
 FIREBIRD_TYPES = {
     261: "BLOB",
@@ -177,7 +179,7 @@ MYSQL_PRIVS = {
 PGSQL_PRIVS = {
     1: "createdb",
     2: "super",
-    3: "catupd",
+    3: "replication",
 }
 
 # Reference(s): http://stackoverflow.com/a/17672504
@@ -228,7 +230,7 @@ DBMS_DICT = {
     DBMS.ORACLE: (ORACLE_ALIASES, "python-oracledb", "https://oracle.github.io/python-oracledb/", "oracle"),
     DBMS.SQLITE: (SQLITE_ALIASES, "python-sqlite", "https://docs.python.org/3/library/sqlite3.html", "sqlite"),
     DBMS.ACCESS: (ACCESS_ALIASES, "python-pyodbc", "https://github.com/mkleehammer/pyodbc", "access"),
-    DBMS.FIREBIRD: (FIREBIRD_ALIASES, "python-kinterbasdb", "http://kinterbasdb.sourceforge.net/", "firebird"),
+    DBMS.FIREBIRD: (FIREBIRD_ALIASES, "python-kinterbasdb", "https://kinterbasdb.sourceforge.net/", "firebird"),
     DBMS.MAXDB: (MAXDB_ALIASES, None, None, "maxdb"),
     DBMS.SYBASE: (SYBASE_ALIASES, "python-pymssql", "https://github.com/pymssql/pymssql", "sybase"),
     DBMS.DB2: (DB2_ALIASES, "python ibm-db", "https://github.com/ibmdb/python-ibmdb", "ibm_db_sa"),
@@ -250,6 +252,8 @@ DBMS_DICT = {
     DBMS.FRONTBASE: (FRONTBASE_ALIASES, None, None, None),
     DBMS.RAIMA: (RAIMA_ALIASES, None, None, None),
     DBMS.VIRTUOSO: (VIRTUOSO_ALIASES, None, None, None),
+    DBMS.SNOWFLAKE: (SNOWFLAKE_ALIASES, None, None, "snowflake"),
+    DBMS.SPANNER: (SPANNER_ALIASES, None, None, "spanner"),
 }
 
 # Reference: https://blog.jooq.org/tag/sysibm-sysdummy1/
@@ -257,7 +261,7 @@ FROM_DUMMY_TABLE = {
     DBMS.ORACLE: " FROM DUAL",
     DBMS.ACCESS: " FROM MSysAccessObjects",
     DBMS.FIREBIRD: " FROM RDB$DATABASE",
-    DBMS.MAXDB: " FROM VERSIONS",
+    DBMS.MAXDB: " FROM DUAL",
     DBMS.DB2: " FROM SYSIBM.SYSDUMMY1",
     DBMS.HSQLDB: " FROM INFORMATION_SCHEMA.SYSTEM_USERS",
     DBMS.INFORMIX: " FROM SYSMASTER:SYSDUAL",
@@ -269,11 +273,11 @@ FROM_DUMMY_TABLE = {
 HEURISTIC_NULL_EVAL = {
     DBMS.ACCESS: "CVAR(NULL)",
     DBMS.MAXDB: "ALPHA(NULL)",
-    DBMS.MSSQL: "IIF(1=1,DIFFERENCE(NULL,NULL),0)",
-    DBMS.MYSQL: "QUARTER(NULL XOR NULL)",
+    DBMS.MSSQL: "PARSENAME(NULL,NULL)",
+    DBMS.MYSQL: "IFNULL(QUARTER(NULL),NULL XOR NULL)",  # NOTE: previous form (i.e., QUARTER(NULL XOR NULL)) was bad as some optimization engines wrongly evaluate QUARTER(NULL XOR NULL) to 0
     DBMS.ORACLE: "INSTR2(NULL,NULL)",
     DBMS.PGSQL: "QUOTE_IDENT(NULL)",
-    DBMS.SQLITE: "UNLIKELY(NULL)",
+    DBMS.SQLITE: "JULIANDAY(NULL)",
     DBMS.H2: "STRINGTOUTF8(NULL)",
     DBMS.MONETDB: "CODE(NULL)",
     DBMS.DERBY: "NULLIF(USER,SESSION_USER)",
@@ -282,13 +286,15 @@ HEURISTIC_NULL_EVAL = {
     DBMS.PRESTO: "FROM_HEX(NULL)",
     DBMS.ALTIBASE: "TDESENCRYPT(NULL,NULL)",
     DBMS.MIMERSQL: "ASCII_CHAR(256)",
-    DBMS.CRATEDB: "MD5(NULL~NULL)",  # Note: NULL~NULL also being evaluated on H2 and Ignite
+    DBMS.CRATEDB: "MD5(NULL~NULL)",  # NOTE: NULL~NULL also being evaluated on H2 and Ignite
     DBMS.CUBRID: "(NULL SETEQ NULL)",
     DBMS.CACHE: "%SQLUPPER NULL",
     DBMS.EXTREMEDB: "NULLIFZERO(hashcode(NULL))",
-    DBMS.RAIMA: "IF(ROWNUMBER()>0,CONVERT(NULL,TINYINT),NULL))",
+    DBMS.RAIMA: "IF(ROWNUMBER()>0,CONVERT(NULL,TINYINT),NULL)",
     DBMS.VIRTUOSO: "__MAX_NOTNULL(NULL)",
-    DBMS.CLICKHOUSE: "halfMD5(NULL) IS NULL",
+    DBMS.CLICKHOUSE: "halfMD5(NULL)",
+    DBMS.SNOWFLAKE: "BOOLNOT(NULL)",
+    DBMS.SPANNER: "FARM_FINGERPRINT(NULL)",
 }
 
 SQL_STATEMENTS = {
@@ -324,6 +330,7 @@ SQL_STATEMENTS = {
         "update ",
         "delete ",
         "merge ",
+        "copy ",
         "load ",
     ),
 
@@ -380,13 +387,24 @@ DEPRECATED_OPTIONS = {
 }
 
 DUMP_DATA_PREPROCESS = {
-    DBMS.ORACLE: {"XMLTYPE": "(%s).getStringVal()"},  # Reference: https://www.tibcommunity.com/docs/DOC-3643
-    DBMS.MSSQL: {"IMAGE": "CONVERT(VARBINARY(MAX),%s)"},
+    DBMS.ORACLE: {"XMLTYPE": "(%s).getStringVal()"},
+    DBMS.MSSQL: {
+        "IMAGE": "CONVERT(VARBINARY(MAX),%s)",
+        "GEOMETRY": "(%s).STAsText()",
+        "GEOGRAPHY": "(%s).STAsText()"
+    },
+    DBMS.PGSQL: {
+        "GEOMETRY": "ST_AsText(%s)",
+        "GEOGRAPHY": "ST_AsText(%s)"
+    },
+    DBMS.MYSQL: {
+        "GEOMETRY": "ST_AsText(%s)"
+    }
 }
 
 DEFAULT_DOC_ROOTS = {
     OS.WINDOWS: ("C:/xampp/htdocs/", "C:/wamp/www/", "C:/Inetpub/wwwroot/"),
-    OS.LINUX: ("/var/www/", "/var/www/html", "/var/www/htdocs", "/usr/local/apache2/htdocs", "/usr/local/www/data", "/var/apache2/htdocs", "/var/www/nginx-default", "/srv/www/htdocs", "/usr/local/var/www")  # Reference: https://wiki.apache.org/httpd/DistrosDefaultLayout
+    OS.LINUX: ("/var/www/", "/var/www/html", "/var/www/htdocs", "/usr/local/apache2/htdocs", "/usr/local/www/data", "/var/apache2/htdocs", "/var/www/nginx-default", "/srv/www/htdocs", "/usr/local/var/www", "/usr/share/nginx/html")
 }
 
 PART_RUN_CONTENT_TYPES = {

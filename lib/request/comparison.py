@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -106,7 +106,11 @@ def _comparison(page, headers, code, getRatioValue, pageLength):
         # Dynamic content lines to be excluded before comparison
         if not kb.nullConnection:
             page = removeDynamicContent(page)
-            seqMatcher.set_seq1(removeDynamicContent(kb.pageTemplate))
+            if threadData.lastPageTemplate != kb.pageTemplate:
+                threadData.lastPageTemplateCleaned = removeDynamicContent(kb.pageTemplate)
+                threadData.lastPageTemplate = kb.pageTemplate
+
+            seqMatcher.set_seq1(threadData.lastPageTemplateCleaned)
 
         if not pageLength:
             pageLength = len(page)
@@ -172,13 +176,25 @@ def _comparison(page, headers, code, getRatioValue, pageLength):
             else:
                 key = (hash(seq1), hash(seq2))
 
-            seqMatcher.set_seq1(seq1)
-            seqMatcher.set_seq2(seq2)
+            try:
+                seqMatcher.set_seq1(seq1)
+                seqMatcher.set_seq2(seq2)
+            except:
+                seqMatcher.set_seq1(repr(seq1))
+                seqMatcher.set_seq2(repr(seq2))
 
             if key in kb.cache.comparison:
                 ratio = kb.cache.comparison[key]
             else:
-                ratio = round(seqMatcher.quick_ratio() if not kb.heavilyDynamic else seqMatcher.ratio(), 3)
+                try:
+                    try:
+                        ratio = seqMatcher.quick_ratio() if not kb.heavilyDynamic else seqMatcher.ratio()
+                    except (TypeError, MemoryError, SystemError):
+                        ratio = seqMatcher.ratio()
+                except:
+                    ratio = 0.0
+
+                ratio = round(ratio, 3)
 
             if key:
                 kb.cache.comparison[key] = ratio

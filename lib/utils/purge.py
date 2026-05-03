@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -50,7 +50,7 @@ def purge(directory):
     for filepath in filepaths:
         try:
             filesize = os.path.getsize(filepath)
-            with openFile(filepath, "w+b") as f:
+            with openFile(filepath, "w+") as f:
                 f.write("".join(_unichr(random.randint(0, 255)) for _ in xrange(filesize)))
         except:
             pass

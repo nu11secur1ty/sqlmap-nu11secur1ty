@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -65,6 +65,7 @@ class HTTPSConnection(_http_client.HTTPSConnection):
         #               https://www.mnot.net/blog/2014/12/27/python_2_and_tls_sni
         if hasattr(ssl, "SSLContext"):
             for protocol in (_ for _ in _protocols if _ >= ssl.PROTOCOL_TLSv1):
+                sock = None
                 try:
                     sock = create_sock()
                     if protocol not in _contexts:
@@ -83,7 +84,18 @@ class HTTPSConnection(_http_client.HTTPSConnection):
                             _contexts[protocol].set_ciphers("ALL@SECLEVEL=0")
                         except (ssl.SSLError, AttributeError):
                             pass
-                    result = _contexts[protocol].wrap_socket(sock, do_handshake_on_connect=True, server_hostname=self.host if re.search(r"\A[\d.]+\Z", self.host or "") is None else None)
+
+                    hostname = self.host
+                    if conf.host:
+                        hostname = conf.host
+                    else:
+                        for header, value in conf.httpHeaders:
+                            if header.lower() == "host":
+                                hostname = value
+                                break
+                    hostname = hostname if re.search(r"\A[\d.]+\Z", hostname or "") is None else None
+                    result = _contexts[protocol].wrap_socket(sock, do_handshake_on_connect=True, server_hostname=hostname)
+
                     if result:
                         success = True
                         self.sock = result
@@ -94,6 +106,8 @@ class HTTPSConnection(_http_client.HTTPSConnection):
                         sock.close()
                 except (ssl.SSLError, socket.error, _http_client.BadStatusLine, AttributeError) as ex:
                     self._tunnel_host = None
+                    if sock:
+                        sock.close()
                     logger.debug("SSL connection error occurred for '%s' ('%s')" % (_lut[protocol], getSafeExString(ex)))
 
         elif hasattr(ssl, "wrap_socket"):

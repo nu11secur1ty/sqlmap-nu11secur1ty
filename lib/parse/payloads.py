@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -44,7 +44,7 @@ def parseXmlNode(node):
     for element in node.findall("boundary"):
         boundary = AttribDict()
 
-        for child in element:
+        for child in element.findall("*"):
             if child.text:
                 values = cleanupVals(child.text, child.tag)
                 boundary[child.tag] = values
@@ -56,18 +56,19 @@ def parseXmlNode(node):
     for element in node.findall("test"):
         test = AttribDict()
 
-        for child in element:
+        for child in element.findall("*"):
             if child.text and child.text.strip():
                 values = cleanupVals(child.text, child.tag)
                 test[child.tag] = values
             else:
-                if len(child.findall("*")) == 0:
+                progeny = child.findall("*")
+                if len(progeny) == 0:
                     test[child.tag] = None
                     continue
                 else:
                     test[child.tag] = AttribDict()
 
-                for gchild in child:
+                for gchild in progeny:
                     if gchild.tag in test[child.tag]:
                         prevtext = test[child.tag][gchild.tag]
                         test[child.tag][gchild.tag] = [prevtext, gchild.text]

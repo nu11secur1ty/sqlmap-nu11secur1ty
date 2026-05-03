@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
 import codecs
 import os
+import platform
 import random
 import re
 import string
@@ -19,7 +20,7 @@ from lib.core.enums import OS
 from thirdparty import six
 
 # sqlmap version (<major>.<minor>.<month>.<monthly commit>)
-VERSION = "1.9.10.5"
+VERSION = "1.10.5.0"
 TYPE = "dev" if VERSION.count('.') > 2 and VERSION.split('.')[-1] != '0' else "stable"
 TYPE_COLORS = {"dev": 33, "stable": 90, "pip": 34}
 VERSION_STRING = "sqlmap/%s#%s" % ('.'.join(VERSION.split('.')[:-1]) if VERSION.count('.') > 2 and VERSION.split('.')[-1] == '0' else VERSION, TYPE)
@@ -51,7 +52,6 @@ BANNER = """\033[01;33m\
       \033[0m\033[4;37m%s\033[0m\n
 """ % (TYPE_COLORS.get(TYPE, 31), VERSION_STRING.split('/')[-1], SITE)
 
-
 # Minimum distance of ratio from kb.matchRatio to result in True
 DIFF_TOLERANCE = 0.05
 CONSTANT_RATIO = 0.9
@@ -70,7 +70,7 @@ LOWER_RATIO_BOUND = 0.02
 UPPER_RATIO_BOUND = 0.98
 
 # For filling in case of dumb push updates
-DUMMY_JUNK = "Aich8ooT"
+DUMMY_JUNK = "fooj0Zo4"
 
 # Markers for special cases when parameter values contain html encoded characters
 PARAMETER_AMP_MARKER = "__PARAMETER_AMP__"
@@ -130,7 +130,10 @@ PRECONNECT_CANDIDATE_TIMEOUT = 10
 PRECONNECT_INCOMPATIBLE_SERVERS = ("SimpleHTTP", "BaseHTTP")
 
 # Identify WAF/IPS inside limited number of responses (Note: for optimization purposes)
-IDENTYWAF_PARSE_LIMIT = 10
+IDENTYWAF_PARSE_COUNT_LIMIT = 10
+
+# Identify WAF/IPS inside limited size of responses
+IDENTYWAF_PARSE_PAGE_LIMIT = 4 * 1024
 
 # Maximum sleep time in "Murphy" (testing) mode
 MAX_MURPHY_SLEEP_TIME = 3
@@ -148,7 +151,7 @@ DUCKDUCKGO_REGEX = r'<a class="result__url" href="(htt[^"]+)'
 BING_REGEX = r'<h2><a href="([^"]+)" h='
 
 # Dummy user agent for search (if default one returns different results)
-DUMMY_SEARCH_USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:49.0) Gecko/20100101 Firefox/49.0"
+DUMMY_SEARCH_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0"
 
 # Regular expression used for extracting content from "textual" tags
 TEXT_TAG_REGEX = r"(?si)<(abbr|acronym|b|blockquote|br|center|cite|code|dt|em|font|h[1-6]|i|li|p|pre|q|strong|sub|sup|td|th|title|tt|u)(?!\w).*?>(?P<result>[^<]+)"
@@ -200,7 +203,7 @@ MAX_TECHNIQUES_PER_VALUE = 2
 MAX_BUFFERED_PARTIAL_UNION_LENGTH = 1024
 
 # Maximum size of cache used in @cachedmethod decorator
-MAX_CACHE_ITEMS = 256
+MAX_CACHE_ITEMS = 1024
 
 # Suffix used for naming meta databases in DBMS(es) without explicit database name
 METADB_SUFFIX = "_masterdb"
@@ -268,6 +271,7 @@ WEBSOCKET_INITIAL_TIMEOUT = 3
 PLATFORM = os.name
 PYVERSION = sys.version.split()[0]
 IS_WIN = PLATFORM == "nt"
+IS_PYPY = platform.python_implementation() == "PyPy"
 
 # Check if running in terminal
 IS_TTY = hasattr(sys.stdout, "fileno") and os.isatty(sys.stdout.fileno())
@@ -301,12 +305,14 @@ EXTREMEDB_SYSTEM_DBS = ("",)
 FRONTBASE_SYSTEM_DBS = ("DEFINITION_SCHEMA", "INFORMATION_SCHEMA")
 RAIMA_SYSTEM_DBS = ("",)
 VIRTUOSO_SYSTEM_DBS = ("",)
+SNOWFLAKE_SYSTEM_DBS = ("INFORMATION_SCHEMA",)
+SPANNER_SYSTEM_DBS = ("INFORMATION_SCHEMA", "SPANNER_SYS")
 
 # Note: (<regular>) + (<forks>)
 MSSQL_ALIASES = ("microsoft sql server", "mssqlserver", "mssql", "ms")
 MYSQL_ALIASES = ("mysql", "my") + ("mariadb", "maria", "memsql", "tidb", "percona", "drizzle", "doris", "starrocks")
 PGSQL_ALIASES = ("postgresql", "postgres", "pgsql", "psql", "pg") + ("cockroach", "cockroachdb", "amazon redshift", "redshift", "greenplum", "yellowbrick", "enterprisedb", "yugabyte", "yugabytedb", "opengauss")
-ORACLE_ALIASES = ("oracle", "orcl", "ora", "or")
+ORACLE_ALIASES = ("oracle", "orcl", "ora", "or", "dm8")
 SQLITE_ALIASES = ("sqlite", "sqlite3")
 ACCESS_ALIASES = ("microsoft access", "msaccess", "access", "jet")
 FIREBIRD_ALIASES = ("firebird", "mozilla firebird", "interbase", "ibase", "fb")
@@ -331,26 +337,29 @@ EXTREMEDB_ALIASES = ("extremedb", "extreme")
 FRONTBASE_ALIASES = ("frontbase",)
 RAIMA_ALIASES = ("raima database manager", "raima", "raimadb", "raimadm", "rdm", "rds", "velocis")
 VIRTUOSO_ALIASES = ("virtuoso", "openlink virtuoso")
+SNOWFLAKE_ALIASES = ("snowflake",)
+SPANNER_ALIASES = ("spanner", "google cloud spanner", "google spanner")
 
 DBMS_DIRECTORY_DICT = dict((getattr(DBMS, _), getattr(DBMS_DIRECTORY_NAME, _)) for _ in dir(DBMS) if not _.startswith("_"))
 
-SUPPORTED_DBMS = set(MSSQL_ALIASES + MYSQL_ALIASES + PGSQL_ALIASES + ORACLE_ALIASES + SQLITE_ALIASES + ACCESS_ALIASES + FIREBIRD_ALIASES + MAXDB_ALIASES + SYBASE_ALIASES + DB2_ALIASES + HSQLDB_ALIASES + H2_ALIASES + INFORMIX_ALIASES + MONETDB_ALIASES + DERBY_ALIASES + VERTICA_ALIASES + MCKOI_ALIASES + PRESTO_ALIASES + ALTIBASE_ALIASES + MIMERSQL_ALIASES + CLICKHOUSE_ALIASES + CRATEDB_ALIASES + CUBRID_ALIASES + CACHE_ALIASES + EXTREMEDB_ALIASES + RAIMA_ALIASES + VIRTUOSO_ALIASES)
+SUPPORTED_DBMS = set(MSSQL_ALIASES + MYSQL_ALIASES + PGSQL_ALIASES + ORACLE_ALIASES + SQLITE_ALIASES + ACCESS_ALIASES + FIREBIRD_ALIASES + MAXDB_ALIASES + SYBASE_ALIASES + DB2_ALIASES + HSQLDB_ALIASES + H2_ALIASES + INFORMIX_ALIASES + MONETDB_ALIASES + DERBY_ALIASES + VERTICA_ALIASES + MCKOI_ALIASES + PRESTO_ALIASES + ALTIBASE_ALIASES + MIMERSQL_ALIASES + CLICKHOUSE_ALIASES + CRATEDB_ALIASES + CUBRID_ALIASES + CACHE_ALIASES + EXTREMEDB_ALIASES + RAIMA_ALIASES + VIRTUOSO_ALIASES + SNOWFLAKE_ALIASES + SPANNER_ALIASES)
 SUPPORTED_OS = ("linux", "windows")
 
-DBMS_ALIASES = ((DBMS.MSSQL, MSSQL_ALIASES), (DBMS.MYSQL, MYSQL_ALIASES), (DBMS.PGSQL, PGSQL_ALIASES), (DBMS.ORACLE, ORACLE_ALIASES), (DBMS.SQLITE, SQLITE_ALIASES), (DBMS.ACCESS, ACCESS_ALIASES), (DBMS.FIREBIRD, FIREBIRD_ALIASES), (DBMS.MAXDB, MAXDB_ALIASES), (DBMS.SYBASE, SYBASE_ALIASES), (DBMS.DB2, DB2_ALIASES), (DBMS.HSQLDB, HSQLDB_ALIASES), (DBMS.H2, H2_ALIASES), (DBMS.INFORMIX, INFORMIX_ALIASES), (DBMS.MONETDB, MONETDB_ALIASES), (DBMS.DERBY, DERBY_ALIASES), (DBMS.VERTICA, VERTICA_ALIASES), (DBMS.MCKOI, MCKOI_ALIASES), (DBMS.PRESTO, PRESTO_ALIASES), (DBMS.ALTIBASE, ALTIBASE_ALIASES), (DBMS.MIMERSQL, MIMERSQL_ALIASES), (DBMS.CLICKHOUSE, CLICKHOUSE_ALIASES), (DBMS.CRATEDB, CRATEDB_ALIASES), (DBMS.CUBRID, CUBRID_ALIASES), (DBMS.CACHE, CACHE_ALIASES), (DBMS.EXTREMEDB, EXTREMEDB_ALIASES), (DBMS.FRONTBASE, FRONTBASE_ALIASES), (DBMS.RAIMA, RAIMA_ALIASES), (DBMS.VIRTUOSO, VIRTUOSO_ALIASES))
+DBMS_ALIASES = ((DBMS.MSSQL, MSSQL_ALIASES), (DBMS.MYSQL, MYSQL_ALIASES), (DBMS.PGSQL, PGSQL_ALIASES), (DBMS.ORACLE, ORACLE_ALIASES), (DBMS.SQLITE, SQLITE_ALIASES), (DBMS.ACCESS, ACCESS_ALIASES), (DBMS.FIREBIRD, FIREBIRD_ALIASES), (DBMS.MAXDB, MAXDB_ALIASES), (DBMS.SYBASE, SYBASE_ALIASES), (DBMS.DB2, DB2_ALIASES), (DBMS.HSQLDB, HSQLDB_ALIASES), (DBMS.H2, H2_ALIASES), (DBMS.INFORMIX, INFORMIX_ALIASES), (DBMS.MONETDB, MONETDB_ALIASES), (DBMS.DERBY, DERBY_ALIASES), (DBMS.VERTICA, VERTICA_ALIASES), (DBMS.MCKOI, MCKOI_ALIASES), (DBMS.PRESTO, PRESTO_ALIASES), (DBMS.ALTIBASE, ALTIBASE_ALIASES), (DBMS.MIMERSQL, MIMERSQL_ALIASES), (DBMS.CLICKHOUSE, CLICKHOUSE_ALIASES), (DBMS.CRATEDB, CRATEDB_ALIASES), (DBMS.CUBRID, CUBRID_ALIASES), (DBMS.CACHE, CACHE_ALIASES), (DBMS.EXTREMEDB, EXTREMEDB_ALIASES), (DBMS.FRONTBASE, FRONTBASE_ALIASES), (DBMS.RAIMA, RAIMA_ALIASES), (DBMS.VIRTUOSO, VIRTUOSO_ALIASES), (DBMS.SNOWFLAKE, SNOWFLAKE_ALIASES), (DBMS.SPANNER, SPANNER_ALIASES))
 
 USER_AGENT_ALIASES = ("ua", "useragent", "user-agent")
 REFERER_ALIASES = ("ref", "referer", "referrer")
 HOST_ALIASES = ("host",)
 
 # DBMSes with upper case identifiers
-UPPER_CASE_DBMSES = set((DBMS.ORACLE, DBMS.DB2, DBMS.FIREBIRD, DBMS.MAXDB, DBMS.H2, DBMS.HSQLDB, DBMS.DERBY, DBMS.ALTIBASE))
+UPPER_CASE_DBMSES = set((DBMS.ORACLE, DBMS.DB2, DBMS.FIREBIRD, DBMS.MAXDB, DBMS.H2, DBMS.HSQLDB, DBMS.DERBY, DBMS.ALTIBASE, DBMS.SNOWFLAKE))
 
 # Default schemas to use (when unable to enumerate)
 H2_DEFAULT_SCHEMA = HSQLDB_DEFAULT_SCHEMA = "PUBLIC"
 VERTICA_DEFAULT_SCHEMA = "public"
 MCKOI_DEFAULT_SCHEMA = "APP"
 CACHE_DEFAULT_SCHEMA = "SQLUser"
+SPANNER_DEFAULT_SCHEMA = "default"
 
 # DBMSes where OFFSET mechanism starts from 1
 PLUS_ONE_DBMSES = set((DBMS.ORACLE, DBMS.DB2, DBMS.ALTIBASE, DBMS.MSSQL, DBMS.CACHE))
@@ -429,7 +438,8 @@ ERROR_PARSING_REGEXES = (
     r"Code: \d+. DB::Exception: (?P<result>[^<>\n]*)",
     r"error '[0-9a-f]{8}'((<[^>]+>)|\s)+(?P<result>[^<>]+)",
     r"\[[^\n\]]{1,100}(ODBC|JDBC)[^\n\]]+\](\[[^\]]+\])?(?P<result>[^\n]+(in query expression|\(SQL| at /[^ ]+pdo)[^\n<]+)",
-    r"(?P<result>query error: SELECT[^<>]+)"
+    r"(?P<result>query error: SELECT[^<>]+)",
+    r"(?P<result>(?:(?:ORA|PLS)-[0-9]{5}:|SQLCODE[ =:]+-?[0-9]+|SQLSTATE[ =:]+[0-9A-Z]{5}|Dynamic SQL Error|DB2 SQL error:|SAP DBTech JDBC:|SQLiteException:|You have an error in your SQL syntax;|Incorrect syntax near |Unclosed quotation mark after the character string|near \"[^\"]+\": syntax error)[^\n<]*)"
 )
 
 # Regular expression used for parsing charset info from meta html headers
@@ -547,7 +557,7 @@ MAX_INT = sys.maxsize
 UNSAFE_DUMP_FILEPATH_REPLACEMENT = '_'
 
 # Options that need to be restored in multiple targets run mode
-RESTORE_MERGED_OPTIONS = ("col", "db", "dnsDomain", "privEsc", "tbl", "regexp", "string", "textOnly", "threads", "timeSec", "tmpPath", "uChar", "user")
+RESTORE_MERGED_OPTIONS = ("col", "db", "dbms", "os", "dnsDomain", "privEsc", "tbl", "regexp", "string", "textOnly", "threads", "timeSec", "tmpPath", "uChar", "user")
 
 # Parameters to be ignored in detection phase (upper case)
 IGNORE_PARAMETERS = ("__VIEWSTATE", "__VIEWSTATEENCRYPTED", "__VIEWSTATEGENERATOR", "__EVENTARGUMENT", "__EVENTTARGET", "__EVENTVALIDATION", "ASPSESSIONID", "ASP.NET_SESSIONID", "JSESSIONID", "CFID", "CFTOKEN")
@@ -664,10 +674,10 @@ WAF_ATTACK_VECTORS = (
 ROTATING_CHARS = ('\\', '|', '|', '/', '-')
 
 # Approximate chunk length (in bytes) used by BigArray objects (only last chunk and cached one are held in memory)
-BIGARRAY_CHUNK_SIZE = 1024 * 1024
+BIGARRAY_CHUNK_SIZE = 32 * 1024 * 1024
 
 # Compress level used for storing BigArray chunks to disk (0-9)
-BIGARRAY_COMPRESS_LEVEL = 9
+BIGARRAY_COMPRESS_LEVEL = 4
 
 # Maximum number of socket pre-connects
 SOCKET_PRE_CONNECT_QUEUE_SIZE = 3
@@ -709,11 +719,14 @@ DEFAULT_COOKIE_DELIMITER = ';'
 # Unix timestamp used for forcing cookie expiration when provided with --load-cookies
 FORCE_COOKIE_EXPIRATION_TIME = "9999999999"
 
-# Github OAuth token used for creating an automatic Issue for unhandled exceptions
-GITHUB_REPORT_OAUTH_TOKEN = "wxqc7vTeW8ohIcX+1wK55Mnql2Ex9cP+2s1dqTr/mjlZJVfLnq24fMAi08v5vRvOmuhVZQdOT/lhIRovWvIJrdECD1ud8VMPWpxY+NmjHoEx+VLK1/vCAUBwJe"
+# Restricted PAT token for automated crash reporting (last rotation: 2026-04-24)
+GITHUB_REPORT_PAT_TOKEN = "0EZh0n8npcacTH4oBcdKKWvfZLcdGWx0N5XFHD2xYaQDOkmI9LWaeDvZRZUMDz8l96RDH3+LVsbwGE5zUtaau0kld9VXG20fVbYES3ooFpNv+U9J5OTnaT2OlZcYzk4w5veT+GiHV5cuCngOJ6QgL1+qRpZDX1gzFecXbm2sNfQ2SGjT5McQe1mtxMTN7WsS1fQfPH+RhMUgbnwXJ5YG6EsBNZWOyk0C16QnekrVtuQpK0/ZVvU560uQhoMsP1/FBguBwJe"
 
-# Skip unforced HashDB flush requests below the threshold number of cached items
-HASHDB_FLUSH_THRESHOLD = 32
+# Flush HashDB threshold number of cached items
+HASHDB_FLUSH_THRESHOLD_ITEMS = 200
+
+# Flush HashDB threshold "dirty" time
+HASHDB_FLUSH_THRESHOLD_TIME = 5
 
 # Number of retries for unsuccessful HashDB flush attempts
 HASHDB_FLUSH_RETRIES = 3
@@ -725,7 +738,7 @@ HASHDB_RETRIEVE_RETRIES = 3
 HASHDB_END_TRANSACTION_RETRIES = 3
 
 # Unique milestone value used for forced deprecation of old HashDB values (e.g. when changing hash/pickle mechanism)
-HASHDB_MILESTONE_VALUE = "OdqjeUpBLc"  # python -c 'import random, string; print "".join(random.sample(string.ascii_letters, 10))'
+HASHDB_MILESTONE_VALUE = "GpqxbkWTfz"  # python -c 'import random, string; print "".join(random.sample(string.ascii_letters, 10))'
 
 # Pickle protocl used for storage of serialized data inside HashDB (https://docs.python.org/3/library/pickle.html#data-stream-format)
 PICKLE_PROTOCOL = 2
@@ -781,7 +794,7 @@ MAX_CONNECTION_TOTAL_SIZE = 100 * 1024 * 1024
 # For preventing MemoryError exceptions (caused when using large sequences in difflib.SequenceMatcher)
 MAX_DIFFLIB_SEQUENCE_LENGTH = 10 * 1024 * 1024
 
-# Page size threshold used in heuristic checks (e.g. getHeuristicCharEncoding(), identYwaf, htmlParser, etc.)
+# Page size threshold used in heuristic checks (e.g. getHeuristicCharEncoding(), htmlParser, etc.)
 HEURISTIC_PAGE_SIZE_THRESHOLD = 64 * 1024
 
 # Maximum (multi-threaded) length of entry in bisection algorithm
@@ -799,8 +812,14 @@ VALID_TIME_CHARS_RUN_THRESHOLD = 100
 # Check for empty columns only if table is sufficiently large
 CHECK_ZERO_COLUMNS_THRESHOLD = 10
 
+# Threshold for checking types of columns in case of SQLite dump format
+CHECK_SQLITE_TYPE_THRESHOLD = 100
+
 # Boldify all logger messages containing these "patterns"
-BOLD_PATTERNS = ("' injectable", "provided empty", "leftover chars", "might be injectable", "' is vulnerable", "is not injectable", "does not seem to be", "test failed", "test passed", "live test final result", "test shows that", "the back-end DBMS is", "created Github", "blocked by the target server", "protection is involved", "CAPTCHA", "specific response", "NULL connection is supported", "PASSED", "FAILED", "for more than", "connection to ")
+BOLD_PATTERNS = ("' injectable", "provided empty", "leftover chars", "might be injectable", "' is vulnerable", "is not injectable", "does not seem to be", "test failed", "test passed", "live test final result", "test shows that", "the back-end DBMS is", "created Github", "blocked by the target server", "protection is involved", "CAPTCHA", "specific response", "NULL connection is supported", "PASSED", "FAILED", "for more than", "connection to ", "will be trimmed", "counterpart to database")
+
+# Regular expression used to search for bold-patterns
+BOLD_PATTERNS_REGEX = '|'.join(BOLD_PATTERNS)
 
 # TLDs used in randomization of email-alike parameter values
 RANDOMIZATION_TLDS = ("com", "net", "ru", "org", "de", "uk", "br", "jp", "cn", "fr", "it", "pl", "tv", "edu", "in", "ir", "es", "me", "info", "gr", "gov", "ca", "co", "se", "cz", "to", "vn", "nl", "cc", "az", "hu", "ua", "be", "no", "biz", "io", "ch", "ro", "sk", "eu", "us", "tw", "pt", "fi", "at", "lt", "kz", "cl", "hr", "pk", "lv", "la", "pe", "au")
@@ -836,7 +855,7 @@ RESTAPI_DEFAULT_ADDRESS = "127.0.0.1"
 RESTAPI_DEFAULT_PORT = 8775
 
 # Unsupported options by REST-JSON API server
-RESTAPI_UNSUPPORTED_OPTIONS = ("sqlShell", "wizard")
+RESTAPI_UNSUPPORTED_OPTIONS = ("sqlShell", "wizard", "evalCode", "alert")
 
 # Use "Supplementary Private Use Area-A"
 INVALID_UNICODE_PRIVATE_AREA = False
@@ -887,7 +906,7 @@ MAX_HISTORY_LENGTH = 1000
 MIN_ENCODED_LEN_CHECK = 5
 
 # Timeout in seconds in which Metasploit remote session has to be initialized
-METASPLOIT_SESSION_TIMEOUT = 120
+METASPLOIT_SESSION_TIMEOUT = 180
 
 # Reference: http://www.postgresql.org/docs/9.0/static/catalog-pg-largeobject.html
 LOBLKSIZE = 2048
@@ -906,7 +925,7 @@ CSRF_TOKEN_PARAMETER_INFIXES = ("csrf", "xsrf", "token", "nonce")
 
 # Prefixes used in brute force search for web server document root
 BRUTE_DOC_ROOT_PREFIXES = {
-    OS.LINUX: ("/var/www", "/usr/local/apache", "/usr/local/apache2", "/usr/local/www/apache22", "/usr/local/www/apache24", "/usr/local/httpd", "/var/www/nginx-default", "/srv/www", "/var/www/%TARGET%", "/var/www/vhosts/%TARGET%", "/var/www/virtual/%TARGET%", "/var/www/clients/vhosts/%TARGET%", "/var/www/clients/virtual/%TARGET%"),
+    OS.LINUX: ("/var/www", "/usr/local/apache", "/usr/local/apache2", "/usr/local/www/apache22", "/usr/local/www/apache24", "/usr/local/httpd", "/var/www/nginx-default", "/srv/www", "/var/www/%TARGET%", "/var/www/vhosts/%TARGET%", "/var/www/virtual/%TARGET%", "/var/www/clients/vhosts/%TARGET%", "/var/www/clients/virtual/%TARGET%", "/Library/WebServer/Documents", "/opt/homebrew/var/www"),
     OS.WINDOWS: ("/xampp", "/Program Files/xampp", "/wamp", "/Program Files/wampp", "/Apache/Apache", "/apache", "/Program Files/Apache Group/Apache", "/Program Files/Apache Group/Apache2", "/Program Files/Apache Group/Apache2.2", "/Program Files/Apache Group/Apache2.4", "/Inetpub/wwwroot", "/Inetpub/wwwroot/%TARGET%", "/Inetpub/vhosts/%TARGET%")
 }
 
@@ -950,6 +969,7 @@ td{
 }
 th{
     font-size:12px;
+    cursor:pointer;
 }
 </style>"""
 

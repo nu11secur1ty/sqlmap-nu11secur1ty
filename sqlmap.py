@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -203,7 +203,7 @@ def main():
                                     target = targets[i]
 
                                     if not re.search(r"(?i)\Ahttp[s]*://", target):
-                                        target = "http://%s" % target
+                                        target = "https://%s" % target
 
                                     infoMsg = "starting crawler for target URL '%s' (%d/%d)" % (target, i + 1, len(targets))
                                     logger.info(infoMsg)
@@ -347,6 +347,12 @@ def main():
             logger.critical(errMsg)
             raise SystemExit
 
+        elif all(_ in excMsg for _ in ("httpcore", "typing.", "AttributeError")):
+            errMsg = "please update the 'httpcore' package (>= 1.0.8) "
+            errMsg += "(Reference: 'https://github.com/encode/httpcore/discussions/995')"
+            logger.critical(errMsg)
+            raise SystemExit
+
         elif "invalid maximum character passed to PyUnicode_New" in excMsg and re.search(r"\A3\.[34]", sys.version) is not None:
             errMsg = "please upgrade the Python version (>= 3.5) "
             errMsg += "(Reference: 'https://bugs.python.org/issue18183')"
@@ -444,7 +450,7 @@ def main():
         elif kb.get("dumpKeyboardInterrupt"):
             raise SystemExit
 
-        elif any(_ in excMsg for _ in ("Broken pipe",)):
+        elif any(_ in excMsg for _ in ("Broken pipe", "KeyboardInterrupt")):
             raise SystemExit
 
         elif valid is False:
@@ -582,12 +588,12 @@ def main():
                     pass
 
         if conf.get("hashDB"):
-            conf.hashDB.flush(True)
+            conf.hashDB.flush()
             conf.hashDB.close()         # NOTE: because of PyPy
 
         if conf.get("harFile"):
             try:
-                with openFile(conf.harFile, "w+b") as f:
+                with openFile(conf.harFile, "w+") as f:
                     json.dump(conf.httpCollector.obtain(), fp=f, indent=4, separators=(',', ': '))
             except SqlmapBaseException as ex:
                 errMsg = getSafeExString(ex)

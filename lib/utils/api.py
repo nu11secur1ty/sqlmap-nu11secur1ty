@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -23,6 +23,7 @@ import time
 from lib.core.common import dataToStdout
 from lib.core.common import getSafeExString
 from lib.core.common import openFile
+from lib.core.common import safeCompareStrings
 from lib.core.common import saveConfig
 from lib.core.common import setColor
 from lib.core.common import unArrayizeValue
@@ -293,7 +294,7 @@ def setRestAPILog():
 
 # Generic functions
 def is_admin(token):
-    return DataStore.admin_token == token
+    return safeCompareStrings(DataStore.admin_token, token)
 
 @hook('before_request')
 def check_authentication():

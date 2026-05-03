@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -31,6 +31,7 @@ from lib.core.settings import SAFE_HEX_MARKER
 from lib.core.settings import UNICODE_ENCODING
 from thirdparty import six
 from thirdparty.six import unichr as _unichr
+from thirdparty.six.moves import html_parser
 from thirdparty.six.moves import collections_abc as _collections
 
 try:
@@ -58,7 +59,7 @@ def base64pickle(value):
         try:
             retVal = encodeBase64(pickle.dumps(value), binary=False)
         except:
-            retVal = encodeBase64(pickle.dumps(str(value), PICKLE_PROTOCOL), binary=False)
+            raise
 
     return retVal
 
@@ -81,25 +82,27 @@ def base64unpickle(value):
 
 def htmlUnescape(value):
     """
-    Returns (basic conversion) HTML unescaped value
+    Returns HTML unescaped value
 
     >>> htmlUnescape('a&lt;b') == 'a<b'
     True
+    >>> htmlUnescape('a&lt;b') == 'a<b'
+    True
+    >>> htmlUnescape('&#x66;&#x6f;&#x6f;&#x62;&#x61;&#x72;') == 'foobar'
+    True
+    >>> htmlUnescape('&#102;&#111;&#111;&#98;&#97;&#114;') == 'foobar'
+    True
+    >>> htmlUnescape('&copy;&euro;') == htmlUnescape('&#xA9;&#x20AC;')
+    True
     """
 
-    retVal = value
-
     if value and isinstance(value, six.string_types):
-        replacements = (("&lt;", '<'), ("&gt;", '>'), ("&quot;", '"'), ("&nbsp;", ' '), ("&amp;", '&'), ("&apos;", "'"))
-        for code, value in replacements:
-            retVal = retVal.replace(code, value)
-
-        try:
-            retVal = re.sub(r"&#x([^ ;]+);", lambda match: _unichr(int(match.group(1), 16)), retVal)
-        except (ValueError, OverflowError):
-            pass
-
-    return retVal
+        if six.PY3:
+            import html
+            return html.unescape(value)
+        else:
+            return html_parser.HTMLParser().unescape(value)
+    return value
 
 def singleTimeWarnMessage(message):  # Cross-referenced function
     sys.stdout.write(message)
@@ -135,26 +138,9 @@ def dejsonize(data):
 
     return json.loads(data)
 
-def rot13(data):
-    """
-    Returns ROT13 encoded/decoded text
-
-    >>> rot13('foobar was here!!')
-    'sbbone jnf urer!!'
-    >>> rot13('sbbone jnf urer!!')
-    'foobar was here!!'
-    """
-
-    # Reference: https://stackoverflow.com/a/62662878
-    retVal = ""
-    alphabit = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    for char in data:
-        retVal += alphabit[alphabit.index(char) + 13] if char in alphabit else char
-    return retVal
-
 def decodeHex(value, binary=True):
     """
-    Returns a decoded representation of provided hexadecimal value
+    Returns a decoded representation of the provided hexadecimal value
 
     >>> decodeHex("313233") == b"123"
     True
@@ -182,7 +168,7 @@ def decodeHex(value, binary=True):
 
 def encodeHex(value, binary=True):
     """
-    Returns a encoded representation of provided string value
+    Returns an encoded representation of the provided value
 
     >>> encodeHex(b"123") == b"313233"
     True
@@ -190,10 +176,12 @@ def encodeHex(value, binary=True):
     '313233'
     >>> encodeHex(b"123"[0]) == b"31"
     True
+    >>> encodeHex(123, binary=False)
+    '7b'
     """
 
     if isinstance(value, int):
-        value = six.unichr(value)
+        value = six.int2byte(value)
 
     if isinstance(value, six.text_type):
         value = value.encode(UNICODE_ENCODING)
@@ -251,7 +239,7 @@ def decodeBase64(value, binary=True, encoding=None):
 
 def encodeBase64(value, binary=True, encoding=None, padding=True, safe=False):
     """
-    Returns a decoded representation of provided Base64 value
+    Returns a Base64 encoded representation of the provided value
 
     >>> encodeBase64(b"123") == b"MTIz"
     True
@@ -307,7 +295,11 @@ def getBytes(value, encoding=None, errors="strict", unsafe=True):
     except (LookupError, TypeError):
         encoding = UNICODE_ENCODING
 
-    if isinstance(value, six.text_type):
+    if isinstance(value, bytearray):
+        return bytes(value)
+    elif isinstance(value, memoryview):
+        return value.tobytes()
+    elif isinstance(value, six.text_type):
         if INVALID_UNICODE_PRIVATE_AREA:
             if unsafe:
                 for char in xrange(0xF0000, 0xF00FF + 1):
@@ -316,7 +308,7 @@ def getBytes(value, encoding=None, errors="strict", unsafe=True):
             retVal = value.encode(encoding, errors)
 
             if unsafe:
-                retVal = re.sub(r"%s([0-9a-f]{2})" % SAFE_HEX_MARKER, lambda _: decodeHex(_.group(1)), retVal)
+                retVal = re.sub((r"%s([0-9a-f]{2})" % SAFE_HEX_MARKER).encode(), lambda _: decodeHex(_.group(1)), retVal)
         else:
             try:
                 retVal = value.encode(encoding, errors)
@@ -350,6 +342,8 @@ def getUnicode(value, encoding=None, noneToNull=False):
     True
     >>> getUnicode(None) == 'None'
     True
+    >>> getUnicode(b'/etc/passwd') == '/etc/passwd'
+    True
     """
 
     # Best position for --time-limit mechanism
@@ -366,7 +360,7 @@ def getUnicode(value, encoding=None, noneToNull=False):
         candidates = filterNone((encoding, kb.get("pageEncoding") if kb.get("originalPage") else None, conf.get("encoding"), UNICODE_ENCODING, sys.getfilesystemencoding()))
         if all(_ in value for _ in (b'<', b'>')):
             pass
-        elif any(_ in value for _ in (b":\\", b'/', b'.')) and b'\n' not in value:
+        elif b'\n' not in value and re.search(r"(?i)\w+\.\w{2,3}\Z|\A(\w:\\|/\w+)", six.text_type(value, UNICODE_ENCODING, errors="ignore")):
             candidates = filterNone((encoding, sys.getfilesystemencoding(), kb.get("pageEncoding") if kb.get("originalPage") else None, UNICODE_ENCODING, conf.get("encoding")))
         elif conf.get("encoding") and b'\n' not in value:
             candidates = filterNone((encoding, conf.get("encoding"), kb.get("pageEncoding") if kb.get("originalPage") else None, sys.getfilesystemencoding(), UNICODE_ENCODING))
@@ -415,10 +409,15 @@ def getText(value, encoding=None):
 
 def stdoutEncode(value):
     """
-    Returns binary representation of a given Unicode value safe for writing to stdout
+    Returns textual representation of a given value safe for writing to stdout
+    >>> stdoutEncode(b"foobar")
+    'foobar'
+    >>> stdoutEncode({"url": "http://example.com/foo", "data": "id=1"}) == {"url": "http://example.com/foo", "data": "id=1"}
+    True
     """
 
-    value = value or ""
+    if value is None:
+        value = ""
 
     if IS_WIN and IS_TTY and kb.get("codePage", -1) is None:
         output = shellExec("chcp")
@@ -428,36 +427,33 @@ def stdoutEncode(value):
             try:
                 candidate = "cp%s" % match.group(1)
                 codecs.lookup(candidate)
-            except LookupError:
-                pass
-            else:
                 kb.codePage = candidate
+            except (LookupError, TypeError):
+                pass
 
         kb.codePage = kb.codePage or ""
 
-    if isinstance(value, six.text_type):
-        encoding = kb.get("codePage") or getattr(sys.stdout, "encoding", None) or UNICODE_ENCODING
+    encoding = kb.get("codePage") or getattr(sys.stdout, "encoding", None) or UNICODE_ENCODING
 
-        while True:
-            try:
-                retVal = value.encode(encoding)
-                break
-            except UnicodeEncodeError as ex:
-                value = value[:ex.start] + "?" * (ex.end - ex.start) + value[ex.end:]
+    if six.PY3:
+        if isinstance(value, (bytes, bytearray)):
+            value = getUnicode(value, encoding)
+        elif not isinstance(value, str):
+            # Reference: https://github.com/sqlmapproject/sqlmap/issues/6054
+            return value
 
-                warnMsg = "cannot properly display (some) Unicode characters "
-                warnMsg += "inside your terminal ('%s') environment. All " % encoding
-                warnMsg += "unhandled occurrences will result in "
-                warnMsg += "replacement with '?' character. Please, find "
-                warnMsg += "proper character representation inside "
-                warnMsg += "corresponding output files"
-                singleTimeWarnMessage(warnMsg)
-
-        if six.PY3:
-            retVal = getUnicode(retVal, encoding)
-
+        try:
+            retVal = value.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        except (LookupError, TypeError):
+            retVal = value.encode("ascii", errors="replace").decode("ascii", errors="replace")
     else:
-        retVal = value
+        if isinstance(value, six.text_type):
+            try:
+                retVal = value.encode(encoding, errors="replace")
+            except (LookupError, TypeError):
+                retVal = value.encode("ascii", errors="replace")
+        else:
+            retVal = value
 
     return retVal
 
@@ -472,7 +468,7 @@ def getConsoleLength(value):
     """
 
     if isinstance(value, six.text_type):
-        retVal = sum((2 if ord(_) >= 0x3000 else 1) for _ in value)
+        retVal = len(value) + sum(ord(_) >= 0x3000 for _ in value)
     else:
         retVal = len(value)
 

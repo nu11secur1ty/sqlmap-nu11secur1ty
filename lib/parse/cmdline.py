@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -275,6 +275,9 @@ def cmdLineParser(argv=None):
 
         request.add_argument("--skip-urlencode", dest="skipUrlEncode", action="store_true",
             help="Skip URL encoding of payload data")
+
+        request.add_argument("--skip-xmlencode", dest="skipXmlEncode", action="store_true",
+            help="Skip safe encoding of payload data for SOAP/XML")
 
         request.add_argument("--csrf-token", dest="csrfToken",
             help="Parameter used to hold anti-CSRF token")
@@ -775,6 +778,9 @@ def cmdLineParser(argv=None):
         miscellaneous.add_argument("--disable-hashing", dest="disableHashing", action="store_true",
             help="Disable hash analysis on table dumps")
 
+        miscellaneous.add_argument("--gui", dest="gui", action="store_true",
+            help="Experimental Tkinter GUI")
+
         miscellaneous.add_argument("--list-tampers", dest="listTampers", action="store_true",
             help="Display list of available tamper scripts")
 
@@ -798,6 +804,9 @@ def cmdLineParser(argv=None):
 
         miscellaneous.add_argument("--tmp-dir", dest="tmpDir",
             help="Local directory for storing temporary files")
+
+        miscellaneous.add_argument("--tui", dest="tui", action="store_true",
+            help="Experimental ncurses TUI")
 
         miscellaneous.add_argument("--unstable", dest="unstable", action="store_true",
             help="Adjust options for unstable connections")
@@ -855,9 +864,6 @@ def cmdLineParser(argv=None):
             help=SUPPRESS)
 
         parser.add_argument("--non-interactive", dest="nonInteractive", action="store_true",
-            help=SUPPRESS)
-
-        parser.add_argument("--gui", dest="gui", action="store_true",
             help=SUPPRESS)
 
         parser.add_argument("--smoke-test", dest="smokeTest", action="store_true",
@@ -933,9 +939,16 @@ def cmdLineParser(argv=None):
         checkOldOptions(argv)
 
         if "--gui" in argv:
-            from lib.core.gui import runGui
+            from lib.utils.gui import runGui
 
             runGui(parser)
+
+            raise SqlmapSilentQuitException
+
+        elif "--tui" in argv:
+            from lib.utils.tui import runTui
+
+            runTui(parser)
 
             raise SqlmapSilentQuitException
 

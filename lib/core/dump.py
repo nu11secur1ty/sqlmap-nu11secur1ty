@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -45,6 +45,7 @@ from lib.core.exception import SqlmapGenericException
 from lib.core.exception import SqlmapSystemException
 from lib.core.exception import SqlmapValueException
 from lib.core.replication import Replication
+from lib.core.settings import CHECK_SQLITE_TYPE_THRESHOLD
 from lib.core.settings import DUMP_FILE_BUFFER_SIZE
 from lib.core.settings import HTML_DUMP_CSS_STYLE
 from lib.core.settings import IS_WIN
@@ -109,7 +110,7 @@ class Dump(object):
 
         self._outputFile = os.path.join(conf.outputPath, "log")
         try:
-            self._outputFP = openFile(self._outputFile, "ab" if not conf.flushSession else "wb")
+            self._outputFP = openFile(self._outputFile, 'a' if not conf.flushSession else 'w')
         except IOError as ex:
             errMsg = "error occurred while opening log file ('%s')" % getSafeExString(ex)
             raise SqlmapGenericException(errMsg)
@@ -174,7 +175,7 @@ class Dump(object):
         self.string("current user", data, content_type=CONTENT_TYPE.CURRENT_USER)
 
     def currentDb(self, data):
-        if Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.PGSQL, DBMS.HSQLDB, DBMS.H2, DBMS.MONETDB, DBMS.VERTICA, DBMS.CRATEDB, DBMS.CACHE, DBMS.FRONTBASE):
+        if Backend.getIdentifiedDbms() in (DBMS.ORACLE, DBMS.PGSQL, DBMS.HSQLDB, DBMS.H2, DBMS.MONETDB, DBMS.VERTICA, DBMS.CRATEDB, DBMS.CACHE, DBMS.FRONTBASE, DBMS.SNOWFLAKE):
             self.string("current database (equivalent to schema on %s)" % Backend.getIdentifiedDbms(), data, content_type=CONTENT_TYPE.CURRENT_DB)
         elif Backend.getIdentifiedDbms() in (DBMS.ALTIBASE, DBMS.DB2, DBMS.MIMERSQL, DBMS.MAXDB, DBMS.VIRTUOSO):
             self.string("current database (equivalent to owner on %s)" % Backend.getIdentifiedDbms(), data, content_type=CONTENT_TYPE.CURRENT_DB)
@@ -409,14 +410,17 @@ class Dump(object):
             db = "All"
         table = tableValues["__infos__"]["table"]
 
+        safeDb = re.sub(r"[^\w]", UNSAFE_DUMP_FILEPATH_REPLACEMENT, unsafeSQLIdentificatorNaming(db))
+        safeTable = re.sub(r"[^\w]", UNSAFE_DUMP_FILEPATH_REPLACEMENT, unsafeSQLIdentificatorNaming(table))
+
         if conf.api:
             self._write(tableValues, content_type=CONTENT_TYPE.DUMP_TABLE)
 
         try:
-            dumpDbPath = os.path.join(conf.dumpPath, unsafeSQLIdentificatorNaming(db))
+            dumpDbPath = os.path.join(conf.dumpPath, safeDb)
         except UnicodeError:
             try:
-                dumpDbPath = os.path.join(conf.dumpPath, normalizeUnicode(unsafeSQLIdentificatorNaming(db)))
+                dumpDbPath = os.path.join(conf.dumpPath, normalizeUnicode(safeDb))
             except (UnicodeError, OSError):
                 tempDir = tempfile.mkdtemp(prefix="sqlmapdb")
                 warnMsg = "currently unable to use regular dump directory. "
@@ -426,16 +430,14 @@ class Dump(object):
                 dumpDbPath = tempDir
 
         if conf.dumpFormat == DUMP_FORMAT.SQLITE:
-            replication = Replication(os.path.join(conf.dumpPath, "%s.sqlite3" % unsafeSQLIdentificatorNaming(db)))
+            replication = Replication(os.path.join(conf.dumpPath, "%s.sqlite3" % safeDb))
         elif conf.dumpFormat in (DUMP_FORMAT.CSV, DUMP_FORMAT.HTML):
             if not os.path.isdir(dumpDbPath):
                 try:
                     os.makedirs(dumpDbPath)
                 except:
                     warnFile = True
-
-                    _ = re.sub(r"[^\w]", UNSAFE_DUMP_FILEPATH_REPLACEMENT, unsafeSQLIdentificatorNaming(db))
-                    dumpDbPath = os.path.join(conf.dumpPath, "%s-%s" % (_, hashlib.md5(getBytes(db)).hexdigest()[:8]))
+                    dumpDbPath = os.path.join(conf.dumpPath, "%s-%s" % (safeDb, hashlib.md5(getBytes(db)).hexdigest()[:8]))
 
                     if not os.path.isdir(dumpDbPath):
                         try:
@@ -449,21 +451,19 @@ class Dump(object):
 
                             dumpDbPath = tempDir
 
-            dumpFileName = conf.dumpFile or os.path.join(dumpDbPath, re.sub(r'[\\/]', UNSAFE_DUMP_FILEPATH_REPLACEMENT, "%s.%s" % (unsafeSQLIdentificatorNaming(table), conf.dumpFormat.lower())))
+            dumpFileName = conf.dumpFile or os.path.join(dumpDbPath, "%s.%s" % (safeTable, conf.dumpFormat.lower()))
+
             if not checkFile(dumpFileName, False):
                 try:
-                    openFile(dumpFileName, "w+b").close()
+                    openFile(dumpFileName, "w+").close()
                 except SqlmapSystemException:
                     raise
                 except:
                     warnFile = True
-
-                    _ = re.sub(r"[^\w]", UNSAFE_DUMP_FILEPATH_REPLACEMENT, normalizeUnicode(unsafeSQLIdentificatorNaming(table)))
-                    if len(_) < len(table) or IS_WIN and table.upper() in WINDOWS_RESERVED_NAMES:
-                        _ = re.sub(r"[^\w]", UNSAFE_DUMP_FILEPATH_REPLACEMENT, unsafeSQLIdentificatorNaming(table))
-                        dumpFileName = os.path.join(dumpDbPath, "%s-%s.%s" % (_, hashlib.md5(getBytes(table)).hexdigest()[:8], conf.dumpFormat.lower()))
+                    if IS_WIN and safeTable.upper() in WINDOWS_RESERVED_NAMES:
+                        dumpFileName = os.path.join(dumpDbPath, "%s-%s.%s" % (safeTable, hashlib.md5(getBytes(table)).hexdigest()[:8], conf.dumpFormat.lower()))
                     else:
-                        dumpFileName = os.path.join(dumpDbPath, "%s.%s" % (_, conf.dumpFormat.lower()))
+                        dumpFileName = os.path.join(dumpDbPath, "%s.%s" % (safeTable, conf.dumpFormat.lower()))
             else:
                 appendToFile = any((conf.limitStart, conf.limitStop))
 
@@ -480,9 +480,15 @@ class Dump(object):
                         else:
                             count += 1
 
-            dumpFP = openFile(dumpFileName, "wb" if not appendToFile else "ab", buffering=DUMP_FILE_BUFFER_SIZE)
+            dumpFP = openFile(dumpFileName, 'w' if not appendToFile else 'a', buffering=DUMP_FILE_BUFFER_SIZE)
 
         count = int(tableValues["__infos__"]["count"])
+        if count > TRIM_STDOUT_DUMP_SIZE:
+            warnMsg = "console output will be trimmed to "
+            warnMsg += "last %d rows due to " % TRIM_STDOUT_DUMP_SIZE
+            warnMsg += "large table size"
+            logger.warning(warnMsg)
+
         separator = str()
         field = 1
         fields = len(tableValues) - 1
@@ -509,7 +515,8 @@ class Dump(object):
                 if column != "__infos__":
                     colType = Replication.INTEGER
 
-                    for value in tableValues[column]['values']:
+                    for i in xrange(min(CHECK_SQLITE_TYPE_THRESHOLD, len(tableValues[column]['values']))):
+                        value = tableValues[column]['values'][i]
                         try:
                             if not value or value == " ":  # NULL
                                 continue
@@ -522,7 +529,8 @@ class Dump(object):
                     if colType is None:
                         colType = Replication.REAL
 
-                        for value in tableValues[column]['values']:
+                        for i in xrange(min(CHECK_SQLITE_TYPE_THRESHOLD, len(tableValues[column]['values']))):
+                            value = tableValues[column]['values'][i]
                             try:
                                 if not value or value == " ":  # NULL
                                     continue
@@ -539,7 +547,7 @@ class Dump(object):
             dataToDumpFile(dumpFP, "<!DOCTYPE html>\n<html>\n<head>\n")
             dataToDumpFile(dumpFP, "<meta http-equiv=\"Content-type\" content=\"text/html;charset=%s\">\n" % UNICODE_ENCODING)
             dataToDumpFile(dumpFP, "<meta name=\"generator\" content=\"%s\" />\n" % VERSION_STRING)
-            dataToDumpFile(dumpFP, "<title>%s</title>\n" % ("%s%s" % ("%s." % db if METADB_SUFFIX not in db else "", table)))
+            dataToDumpFile(dumpFP, "<title>%s</title>\n" % ("%s%s" % ("%s." % db if METADB_SUFFIX not in db else "", table)).replace("<", ""))
             dataToDumpFile(dumpFP, HTML_DUMP_CSS_STYLE)
             dataToDumpFile(dumpFP, "\n</head>\n<body>\n<table>\n<thead>\n<tr>\n")
 
@@ -567,7 +575,7 @@ class Dump(object):
                         else:
                             dataToDumpFile(dumpFP, "%s%s" % (safeCSValue(column), conf.csvDel))
                     elif conf.dumpFormat == DUMP_FORMAT.HTML:
-                        dataToDumpFile(dumpFP, "<th>%s</th>" % getUnicode(htmlEscape(column).encode("ascii", "xmlcharrefreplace")))
+                        dataToDumpFile(dumpFP, "<th onclick=\"sortTable(%d,this)\">%s</th>" % (field - 1, getUnicode(htmlEscape(column).encode("ascii", "xmlcharrefreplace"))))
 
                 field += 1
 
@@ -582,16 +590,13 @@ class Dump(object):
         elif conf.dumpFormat == DUMP_FORMAT.SQLITE:
             rtable.beginTransaction()
 
-        if count > TRIM_STDOUT_DUMP_SIZE:
-            warnMsg = "console output will be trimmed to "
-            warnMsg += "last %d rows due to " % TRIM_STDOUT_DUMP_SIZE
-            warnMsg += "large table size"
-            logger.warning(warnMsg)
-
         for i in xrange(count):
             console = (i >= count - TRIM_STDOUT_DUMP_SIZE)
             field = 1
             values = []
+
+            if i == 0 and count > TRIM_STDOUT_DUMP_SIZE:
+                self._write(" ...")
 
             if conf.dumpFormat == DUMP_FORMAT.HTML:
                 dataToDumpFile(dumpFP, "<tr>")
@@ -609,7 +614,9 @@ class Dump(object):
                         value = getUnicode(info["values"][i])
                         value = DUMP_REPLACEMENTS.get(value, value)
 
-                    values.append(value)
+                    if conf.dumpFormat == DUMP_FORMAT.SQLITE:
+                        values.append(value)
+
                     maxlength = int(info["length"])
                     blank = " " * (maxlength - getConsoleLength(value))
                     self._write("| %s%s" % (value, blank), newline=False, console=console)
@@ -663,7 +670,7 @@ class Dump(object):
 
         elif conf.dumpFormat in (DUMP_FORMAT.CSV, DUMP_FORMAT.HTML):
             if conf.dumpFormat == DUMP_FORMAT.HTML:
-                dataToDumpFile(dumpFP, "</tbody>\n</table>\n</body>\n</html>")
+                dataToDumpFile(dumpFP, "</tbody>\n</table>\n<script>let lc=-1,ld=1;function sortTable(n,h){var t=document.querySelector(\"table\"),r=Array.from(t.tBodies[0].rows);ld=(lc==n?-ld:1);lc=n;r.sort((a,b)=>{var x=a.cells[n].innerText.trim(),y=b.cells[n].innerText.trim(),nx=parseFloat(x),ny=parseFloat(y);return(!isNaN(nx)&&!isNaN(ny)?(nx-ny)*ld:x.localeCompare(y)*ld)});r.forEach(e=>t.tBodies[0].appendChild(e));Array.from(t.tHead.rows[0].cells).forEach(c=>{c.innerText=c.innerText.replace(/[\u2191\u2193]/g,\"\")});h.innerText=h.innerText+ (ld==1?\"\u2191\":\"\u2193\");}</script>\n</body>\n</html>")
             else:
                 dataToDumpFile(dumpFP, "\n")
             dumpFP.close()

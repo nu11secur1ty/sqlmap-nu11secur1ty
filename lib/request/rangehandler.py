@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Copyright (c) 2006-2025 sqlmap developers (https://sqlmap.org)
+Copyright (c) 2006-2026 sqlmap developers (https://sqlmap.org)
 See the file 'LICENSE' for copying permission
 """
 
@@ -25,5 +25,5 @@ class HTTPRangeHandler(_urllib.request.BaseHandler):
     def http_error_416(self, req, fp, code, msg, hdrs):
         # HTTP's Range Not Satisfiable error
         errMsg = "there was a problem while connecting "
-        errMsg += "target ('406 - Range Not Satisfiable')"
+        errMsg += "target ('416 - Range Not Satisfiable')"
         raise SqlmapConnectionException(errMsg)

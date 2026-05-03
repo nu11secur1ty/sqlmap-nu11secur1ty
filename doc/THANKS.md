@@ -194,9 +194,6 @@ David Guimaraes, <skysbsb(at)gmail.com>
 * for reporting considerable amount of bugs
 * for suggesting several features
 
-Chris Hall, <chris.hall(at)mod10.net>
-* for coding the prettyprint.py library
-
 Tate Hansen, <tate(at)clearnetsec.com>
 * for donating to sqlmap development
 
@@ -534,6 +531,9 @@ Duarte Silva <duarte.silva(at)serializing.me>
 
 M Simkin, <mlsimkin(at)cox.net>
 * for suggesting a feature
+
+Tanaydin Sirin, <tanaydinsirin(at)gmail.com>
+* for implementation of ncurses TUI (switch --tui)
 
 Konrads Smelkovs, <konrads(at)smelkovs.com>
 * for reporting a few bugs in --sql-shell and --sql-query on Microsoft SQL Server
